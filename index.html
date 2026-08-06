@@ -1645,15 +1645,20 @@ function mountWeather(item, body, itemEl) {
   async function load() {
     if (!body.isConnected) return;
     body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
-    // Race each fetch independently against a 6s timeout. Use Promise.allSettled
-    // so a single failure does not poison the whole widget.
-    const timeout = (ms) => new Promise((r) => setTimeout(() => r(null), ms));
-    const [rhr, fnd] = await Promise.all([
-      Promise.race([fetchHKO("rhrread", "tc"), timeout(6000)]),
-      Promise.race([fetchHKO("fnd", "tc"), timeout(6000)]),
+    // INLINE fetch with hard timeout — bypass fetchHKO helper.
+    // The fetchHKO helper's AbortController logic has been observed to deadlock
+    // in some browser contexts; this inline version always resolves.
+    const timeoutFetch = (url, ms) => Promise.race([
+      fetch(url, { mode: "cors", cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null),
+      new Promise(r => setTimeout(() => r(null), ms))
     ]);
-    if (!body.isConnected) return;
-    if (!rhr) { renderError("HKO 連線失敗 — 請 reload"); return; }
+    try {
+      const [rhr, fnd] = await Promise.all([
+        timeoutFetch(`${PROXY_BASE}/api/hko?dataType=rhrread&lang=tc`, 6000),
+        timeoutFetch(`${PROXY_BASE}/api/hko?dataType=fnd&lang=tc`, 6000),
+      ]);
+      if (!body.isConnected) return;
+      if (!rhr) { renderError("HKO 連線失敗 — 請 reload"); return; }
     const temp   = findPlaceValue(rhr.temperature, place) || rhr.temperature.data[0];
     const humid  = findPlaceValue(rhr.humidity,    place) || rhr.humidity.data[0];
     const uv     = rhr.uvindex && rhr.uvindex.data && rhr.uvindex.data[0];
