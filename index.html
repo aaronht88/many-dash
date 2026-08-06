@@ -1604,11 +1604,14 @@ const HKO_PLACES = {
 
 const HKO_TIMER = new WeakMap();
 
+// Cloudflare Worker proxy (GitHub Pages cannot host Python; routing through many-dash-proxy)
+const PROXY_BASE = "https://many-dash-proxy.aaronht88.workers.dev";
+
 async function fetchHKO(dataType = "rhrread", lang = "tc") {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 12000);
   try {
-    const r = await fetch(`/api/hko?dataType=${dataType}&lang=${lang}`, { signal: ctrl.signal });
+    const r = await fetch(`${PROXY_BASE}/api/hko?dataType=${dataType}&lang=${lang}`, { signal: ctrl.signal });
     if (!r.ok) return null;
     return await r.json();
   } catch (e) { return null; }
@@ -1697,9 +1700,15 @@ function mountWeather(item, body, itemEl) {
       <div class="updated">更新於 ${new Date(rhr.updateTime).toLocaleTimeString("zh-HK", {hour:"2-digit", minute:"2-digit"})}</div>
     `;
   }
-  const tryLoad = () => { if (body.isConnected) load(); };
+  // Defer initial load to next macrotask so any in-progress GridStack attach completes
+  // (mountItem calls renderWidget BEFORE appending to gridEl — requestAnimationFrame races
+  // with GridStack's sync layout pass; setTimeout(0) reliably fires after attach).
+  const tryLoad = () => {
+    if (body.isConnected) load();
+    else setTimeout(tryLoad, 16);
+  };
   if (body.isConnected) load();
-  else requestAnimationFrame(tryLoad);
+  else setTimeout(tryLoad, 0);
   // auto-refresh every 10 min (HKO updates roughly every 10-30 min)
   // WeakMap needs live DOM nodes, so defer until itemEl is attached
   const startRefresh = () => {
@@ -1714,7 +1723,7 @@ function mountWeather(item, body, itemEl) {
     mo.observe(document.body, { childList: true, subtree: true });
   };
   if (itemEl.isConnected) startRefresh();
-  else requestAnimationFrame(startRefresh);
+  else setTimeout(startRefresh, 0);
 }
 
 /* --- Clock (live) --- */
@@ -1829,7 +1838,7 @@ async function fetchFeed(url) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    const r = await fetch(`/api/feed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    const r = await fetch(`${PROXY_BASE}/api/feed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
     if (!r.ok) return null;
     const d = await r.json();
     return d.items || [];
