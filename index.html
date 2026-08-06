@@ -1609,12 +1609,12 @@ const PROXY_BASE = "https://many-dash-proxy.aaronht88.workers.dev";
 
 async function fetchHKO(dataType = "rhrread", lang = "tc") {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 12000);
+  const t = setTimeout(() => ctrl.abort(), 6000);
   try {
     const r = await fetch(`${PROXY_BASE}/api/hko?dataType=${dataType}&lang=${lang}`, { signal: ctrl.signal });
-    if (!r.ok) return null;
+    if (!r.ok) { console.warn('[HKO] HTTP', r.status, dataType); return null; }
     return await r.json();
-  } catch (e) { return null; }
+  } catch (e) { console.warn('[HKO] fail', dataType, e.message); return null; }
   finally { clearTimeout(t); }
 }
 
@@ -1700,15 +1700,17 @@ function mountWeather(item, body, itemEl) {
       <div class="updated">更新於 ${new Date(rhr.updateTime).toLocaleTimeString("zh-HK", {hour:"2-digit", minute:"2-digit"})}</div>
     `;
   }
-  // Defer initial load to next macrotask so any in-progress GridStack attach completes
-  // (mountItem calls renderWidget BEFORE appending to gridEl — requestAnimationFrame races
-  // with GridStack's sync layout pass; setTimeout(0) reliably fires after attach).
+  // Robust defer: poll for body connection every 32ms up to 5s, then load.
+  // mountItem calls renderWidget BEFORE appending to gridEl, so body.isConnected
+  // is false on first call. GridStack's attach is sync but its layout pass happens
+  // on the next animation frame, so we just poll until attached.
+  let tries = 0;
   const tryLoad = () => {
-    if (body.isConnected) load();
-    else setTimeout(tryLoad, 16);
+    if (body.isConnected) { load(); return; }
+    if (tries++ > 150) { renderError("HKO: widget 載入失敗"); return; } // 5s timeout
+    setTimeout(tryLoad, 32);
   };
-  if (body.isConnected) load();
-  else setTimeout(tryLoad, 0);
+  tryLoad();
   // auto-refresh every 10 min (HKO updates roughly every 10-30 min)
   // WeakMap needs live DOM nodes, so defer until itemEl is attached
   const startRefresh = () => {
