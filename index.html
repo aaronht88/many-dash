@@ -1,0 +1,2607 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard Prototype</title>
+
+<!-- GridStack core CSS + JS (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@11.1.2/dist/gridstack.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@11.1.2/dist/gridstack-extra.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/gridstack@11.1.2/dist/gridstack-all.js"></script>
+
+<style>
+  /* ============================================================
+     Design tokens — refined dark theme
+     ============================================================ */
+  :root {
+    /* Surfaces (default = dark, indigo theme) */
+    --bg:           #0a0e1a;
+    --bg-2:         #0d1322;            /* secondary bg layer for gradient */
+    --bg-tint:      rgba(99, 102, 241, 0.08);  /* hue tint mixed into bg */
+    --bg-grad:      radial-gradient(ellipse at top, #131a2c 0%, #0a0e1a 60%);
+    --panel:        rgba(22, 28, 44, 0.85);
+    --panel-solid:  #161c2c;
+    --panel-2:      #1c2438;
+    --panel-3:      #232c44;
+    --panel-tint:   rgba(99, 102, 241, 0.05);  /* subtle accent tint on panel */
+    --border:       rgba(255, 255, 255, 0.07);
+    --border-strong:rgba(255, 255, 255, 0.12);
+    --border-accent:rgba(99, 102, 241, 0.4);
+
+    /* Text */
+    --text:         #e8ecf4;
+    --text-2:       #c4cbd9;
+    --muted:        #7e8699;
+    --muted-2:      #5a6376;
+
+    /* Brand */
+    --accent:       #6366f1;          /* indigo-500 */
+    --accent-2:     #818cf8;          /* indigo-400 */
+    --accent-glow:  rgba(99, 102, 241, 0.35);
+    --accent-soft:  rgba(99, 102, 241, 0.10);
+
+    /* Semantic */
+    --good:         #34d399;
+    --bad:          #f87171;
+    --warn:         #fbbf24;
+    --warn-soft:    rgba(251, 191, 36, 0.12);
+
+    /* Shadows */
+    --shadow-sm:    0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md:    0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg:    0 12px 32px rgba(0,0,0,0.5);
+    --shadow-accent:0 0 0 1px var(--accent-soft), 0 8px 24px rgba(99, 102, 241, 0.18);
+
+    /* Radius scale */
+    --r-sm: 6px;
+    --r-md: 8px;
+    --r-lg: 12px;
+    --r-xl: 16px;
+    --r-full: 999px;
+
+    /* Animation */
+    --ease:   cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out: cubic-bezier(0.0, 0, 0.2, 1);
+    --t-fast: 120ms;
+    --t-med:  200ms;
+    --t-slow: 320ms;
+
+    /* Font family (overridable via settings) */
+    --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+               "PingFang HK", "Microsoft JhengHei", "Hiragino Sans GB", "Noto Sans CJK TC", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --font-serif: "Source Serif Pro", "Source Han Serif TC", "Noto Serif CJK TC", Georgia, serif;
+
+    /* Font size scale (overridable via settings) */
+    --fs-base: 14px;
+    --fs-scale: 1;        /* 1.0 default, can be 0.9 / 1.1 / 1.2 */
+  }
+
+  /* Light theme overrides (full token swap) */
+  body.light {
+    --bg:           #f7f8fc;
+    --bg-2:         #eef0f7;
+    --bg-tint:      rgba(99, 102, 241, 0.04);
+    --bg-grad:      radial-gradient(ellipse at top, #ffffff 0%, #eef0f7 70%);
+    --panel:        rgba(255, 255, 255, 0.88);
+    --panel-solid:  #ffffff;
+    --panel-2:      #f1f3f9;
+    --panel-3:      #e8ebf3;
+    --panel-tint:   rgba(99, 102, 241, 0.03);
+    --border:       rgba(15, 23, 42, 0.08);
+    --border-strong:rgba(15, 23, 42, 0.14);
+    --border-accent:rgba(99, 102, 241, 0.4);
+
+    --text:         #0f172a;
+    --text-2:       #334155;
+    --muted:        #64748b;
+    --muted-2:      #94a3b8;
+
+    --shadow-sm:    0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-md:    0 4px 12px rgba(15, 23, 42, 0.08);
+    --shadow-lg:    0 12px 32px rgba(15, 23, 42, 0.12);
+    --shadow-accent:0 0 0 1px var(--accent-soft), 0 8px 24px rgba(99, 102, 241, 0.20);
+  }
+
+  /* Per-theme color overrides — wider coverage (bg tint, panel tint, shadow hue) */
+  body.theme-emerald {
+    --accent: #10b981; --accent-2: #34d399; --accent-glow: rgba(16, 185, 129, 0.35); --accent-soft: rgba(16, 185, 129, 0.10); --border-accent: rgba(16, 185, 129, 0.4);
+    --bg-tint: rgba(16, 185, 129, 0.08);
+    --panel-tint: rgba(16, 185, 129, 0.05);
+    --bg-grad: radial-gradient(ellipse at top, #102b25 0%, #0a0e1a 60%);
+  }
+  body.theme-rose {
+    --accent: #f43f5e; --accent-2: #fb7185; --accent-glow: rgba(244, 63, 94, 0.35); --accent-soft: rgba(244, 63, 94, 0.10); --border-accent: rgba(244, 63, 94, 0.4);
+    --bg-tint: rgba(244, 63, 94, 0.08);
+    --panel-tint: rgba(244, 63, 94, 0.05);
+    --bg-grad: radial-gradient(ellipse at top, #2a1218 0%, #0a0e1a 60%);
+  }
+  body.theme-amber {
+    --accent: #f59e0b; --accent-2: #fbbf24; --accent-glow: rgba(245, 158, 11, 0.35); --accent-soft: rgba(245, 158, 11, 0.10); --border-accent: rgba(245, 158, 11, 0.4);
+    --bg-tint: rgba(245, 158, 11, 0.08);
+    --panel-tint: rgba(245, 158, 11, 0.05);
+    --bg-grad: radial-gradient(ellipse at top, #2a1d08 0%, #0a0e1a 60%);
+  }
+  body.theme-cyan {
+    --accent: #06b6d4; --accent-2: #22d3ee; --accent-glow: rgba(6, 182, 212, 0.35); --accent-soft: rgba(6, 182, 212, 0.10); --border-accent: rgba(6, 182, 212, 0.4);
+    --bg-tint: rgba(6, 182, 212, 0.08);
+    --panel-tint: rgba(6, 182, 212, 0.05);
+    --bg-grad: radial-gradient(ellipse at top, #082a30 0%, #0a0e1a 60%);
+  }
+  body.theme-slate {
+    --accent: #64748b; --accent-2: #94a3b8; --accent-glow: rgba(100, 116, 139, 0.35); --accent-soft: rgba(100, 116, 139, 0.10); --border-accent: rgba(100, 116, 139, 0.4);
+    --bg-tint: rgba(100, 116, 139, 0.06);
+    --panel-tint: rgba(100, 116, 139, 0.04);
+    --bg-grad: radial-gradient(ellipse at top, #1e2330 0%, #0a0e1a 60%);
+  }
+  /* Light mode theme tints — each theme gets a soft pastel-tinted gradient */
+  body.light.theme-emerald { --bg-grad: radial-gradient(ellipse at top, #ecfdf5 0%, #d1fae5 80%); --bg-tint: rgba(16, 185, 129, 0.06); --panel-tint: rgba(16, 185, 129, 0.04); }
+  body.light.theme-rose    { --bg-grad: radial-gradient(ellipse at top, #fff1f2 0%, #ffe4e6 80%); --bg-tint: rgba(244, 63, 94, 0.06); --panel-tint: rgba(244, 63, 94, 0.04); }
+  body.light.theme-amber   { --bg-grad: radial-gradient(ellipse at top, #fffbeb 0%, #fef3c7 80%); --bg-tint: rgba(245, 158, 11, 0.06); --panel-tint: rgba(245, 158, 11, 0.04); }
+  body.light.theme-cyan    { --bg-grad: radial-gradient(ellipse at top, #ecfeff 0%, #cffafe 80%); --bg-tint: rgba(6, 182, 212, 0.06); --panel-tint: rgba(6, 182, 212, 0.04); }
+  body.light.theme-slate   { --bg-grad: radial-gradient(ellipse at top, #f1f5f9 0%, #e2e8f0 80%); --bg-tint: rgba(100, 116, 139, 0.05); --panel-tint: rgba(100, 116, 139, 0.03); }
+  body.light.theme-indigo  { --bg-grad: radial-gradient(ellipse at top, #eef2ff 0%, #e0e7ff 80%); --bg-tint: rgba(99, 102, 241, 0.06); --panel-tint: rgba(99, 102, 241, 0.04); }
+
+  /* Font family variants */
+  body.font-serif  { --font-ui: var(--font-serif); }
+  body.font-mono   { --font-ui: var(--font-mono); }
+
+  /* Font size scale variants */
+  body.fs-compact    { --fs-scale: 0.88; }
+  body.fs-comfortable{ --fs-scale: 1.0;  }
+  body.fs-spacious   { --fs-scale: 1.15; }
+  body.fs-roomy      { --fs-scale: 1.3;  }
+
+  /* Per-widget font-size override (set via data-fs attribute on .grid-stack-item).
+     Range: 0.7 to 1.5. Default 1.0 (inherits body). */
+  .grid-stack-item[data-fs] { --fs-scale: 1; }  /* base scope; data-fs attribute below sets value */
+  .grid-stack-item[data-fs="0.7"]  { --fs-scale: 0.7;  }
+  .grid-stack-item[data-fs="0.8"]  { --fs-scale: 0.8;  }
+  .grid-stack-item[data-fs="0.85"] { --fs-scale: 0.85; }
+  .grid-stack-item[data-fs="0.9"]  { --fs-scale: 0.9;  }
+  .grid-stack-item[data-fs="0.95"] { --fs-scale: 0.95; }
+  .grid-stack-item[data-fs="1.0"]  { --fs-scale: 1.0;  }
+  .grid-stack-item[data-fs="1.1"]  { --fs-scale: 1.1;  }
+  .grid-stack-item[data-fs="1.2"]  { --fs-scale: 1.2;  }
+  .grid-stack-item[data-fs="1.3"]  { --fs-scale: 1.3;  }
+  .grid-stack-item[data-fs="1.4"]  { --fs-scale: 1.4;  }
+  .grid-stack-item[data-fs="1.5"]  { --fs-scale: 1.5;  }
+
+  /* Per-widget background color (set via data-bg attribute on .grid-stack-item) */
+  .grid-stack-item[data-bg="emerald"] .widget { background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(16, 185, 129, 0.06)); border-color: rgba(16, 185, 129, 0.35); }
+  .grid-stack-item[data-bg="rose"]    .widget { background: linear-gradient(135deg, rgba(244, 63, 94, 0.18), rgba(244, 63, 94, 0.06)); border-color: rgba(244, 63, 94, 0.35); }
+  .grid-stack-item[data-bg="amber"]   .widget { background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.06)); border-color: rgba(245, 158, 11, 0.35); }
+  .grid-stack-item[data-bg="cyan"]    .widget { background: linear-gradient(135deg, rgba(6, 182, 212, 0.18), rgba(6, 182, 212, 0.06)); border-color: rgba(6, 182, 212, 0.35); }
+  .grid-stack-item[data-bg="indigo"]  .widget { background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(99, 102, 241, 0.06)); border-color: rgba(99, 102, 241, 0.35); }
+  .grid-stack-item[data-bg="slate"]   .widget { background: linear-gradient(135deg, rgba(100, 116, 139, 0.18), rgba(100, 116, 139, 0.06)); border-color: rgba(100, 116, 139, 0.35); }
+  .grid-stack-item[data-bg="violet"]  .widget { background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(139, 92, 246, 0.06)); border-color: rgba(139, 92, 246, 0.35); }
+  /* In light mode, use stronger tints for visibility */
+  body.light .grid-stack-item[data-bg="emerald"] .widget { background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(16, 185, 129, 0.12)); border-color: rgba(16, 185, 129, 0.50); }
+  body.light .grid-stack-item[data-bg="rose"]    .widget { background: linear-gradient(135deg, rgba(244, 63, 94, 0.28), rgba(244, 63, 94, 0.12)); border-color: rgba(244, 63, 94, 0.50); }
+  body.light .grid-stack-item[data-bg="amber"]   .widget { background: linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.12)); border-color: rgba(245, 158, 11, 0.50); }
+  body.light .grid-stack-item[data-bg="cyan"]    .widget { background: linear-gradient(135deg, rgba(6, 182, 212, 0.28), rgba(6, 182, 212, 0.12)); border-color: rgba(6, 182, 212, 0.50); }
+  body.light .grid-stack-item[data-bg="indigo"]  .widget { background: linear-gradient(135deg, rgba(99, 102, 241, 0.28), rgba(99, 102, 241, 0.12)); border-color: rgba(99, 102, 241, 0.50); }
+  body.light .grid-stack-item[data-bg="slate"]   .widget { background: linear-gradient(135deg, rgba(100, 116, 139, 0.28), rgba(100, 116, 139, 0.12)); border-color: rgba(100, 116, 139, 0.50); }
+  body.light .grid-stack-item[data-bg="violet"]  .widget { background: linear-gradient(135deg, rgba(139, 92, 246, 0.28), rgba(139, 92, 246, 0.12)); border-color: rgba(139, 92, 246, 0.50); }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image: var(--bg-grad);
+    background-attachment: fixed;
+    color: var(--text);
+    font: calc(var(--fs-base) * var(--fs-scale)) / 1.5 var(--font-ui);
+    font-feature-settings: "cv11", "ss01", "tnum";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+    transition: background 0.3s var(--ease), color 0.3s var(--ease);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--r-full);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); background-clip: padding-box; }
+
+  /* ============================================================
+     Header / page tabs
+     ============================================================ */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: rgba(16, 20, 32, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    position: relative;
+    z-index: 10;
+  }
+  header .brand {
+    font-weight: 700;
+    font-size: calc(15px * var(--fs-scale));
+    margin-right: 16px;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  header .brand::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .tabs { display: flex; gap: 6px; flex: 1; overflow-x: auto; padding: 2px 0; }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: calc(13px * var(--fs-scale));
+    font-weight: 500;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .tab:hover { color: var(--text-2); background: var(--panel-2); }
+  .tab.active {
+    color: var(--text);
+    background: var(--panel-3);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm);
+  }
+  .tab .x {
+    color: var(--muted-2);
+    font-size: calc(10px * var(--fs-scale));
+    padding: 0 2px;
+    border-radius: var(--r-sm);
+    transition: all var(--t-fast) var(--ease);
+  }
+  .tab .x:hover { color: var(--bad); background: rgba(248, 113, 113, 0.1); }
+
+  button.tool {
+    background: var(--panel-2);
+    color: var(--text-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 7px 14px;
+    cursor: pointer;
+    font: inherit;
+    font-size: calc(13px * var(--fs-scale));
+    font-weight: 500;
+    transition: all var(--t-fast) var(--ease);
+  }
+  button.tool:hover { background: var(--panel-3); color: var(--text); border-color: var(--border-strong); }
+  button.tool:active { transform: scale(0.98); }
+
+  .menu { position: relative; }
+  .menu-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--panel-solid);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    min-width: 200px;
+    padding: 4px;
+    z-index: 50;
+    display: none;
+    box-shadow: var(--shadow-lg);
+  }
+  .menu.open .menu-list { display: block; }
+  .menu-item {
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-size: calc(13px * var(--fs-scale));
+    color: var(--text-2);
+    transition: background var(--t-fast) var(--ease);
+  }
+  .menu-item:hover { background: var(--panel-3); color: var(--text); }
+  .menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ============================================================
+     Grid container
+     ============================================================ */
+  .grid-wrap {
+    position: absolute;
+    inset: 60px 0 0 0;
+    overflow: auto;
+    padding: 16px;
+  }
+  .grid-stack {
+    background: transparent;
+    position: relative;
+    min-height: 100%;
+  }
+  /* JS-drawn gridlines, sized to match GridStack cellWidth/cellHeight */
+  .gs-line {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+    transition: background var(--t-fast) var(--ease);
+  }
+  .gs-line.v { top: 0; bottom: 0; width: 1px; }
+  .gs-line.h { left: 0; right: 0; height: 1px; }
+  .grid-stack.is-snapping .gs-line { background: rgba(99, 102, 241, 0.18); }
+
+  /* GridStack placeholder during drag/resize */
+  .grid-stack > .grid-stack-placeholder {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(167, 139, 250, 0.10)) !important;
+    border: 1.5px dashed var(--accent) !important;
+    border-radius: var(--r-lg) !important;
+    z-index: 1 !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08), 0 0 32px var(--accent-glow);
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+  .grid-stack > .grid-stack-placeholder > .placeholder-content {
+    background: transparent !important;
+    border: none !important;
+    inset: 0 !important;
+  }
+
+  /* Cell coord label on the placeholder */
+  .grid-stack > .grid-stack-placeholder::after {
+    content: attr(data-coord);
+    position: absolute;
+    top: 8px; left: 10px;
+    font: 600 10px/1 ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    color: var(--accent-2);
+    background: rgba(10, 14, 26, 0.85);
+    padding: 4px 8px;
+    border-radius: var(--r-sm);
+    pointer-events: none;
+    letter-spacing: 0.3px;
+    border: 1px solid var(--border-accent);
+  }
+
+  /* ============================================================
+     Widget base — modern borderless design
+     Header is hidden by default; settings & drag are accessed via
+     right-click menu and floating button. Resize handle stays in corner.
+     ============================================================ */
+  .widget {
+    background: var(--panel);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+    position: relative;
+  }
+  .grid-stack-item:hover .widget {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+  }
+  /* Header is invisible — drag handle is the widget body via GridStack handle config */
+  .widget header.w-head {
+    display: none;
+  }
+  /* Floating action button (settings) — top-right, fades in on hover */
+  .widget .w-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 2px;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity var(--t-fast) var(--ease);
+    pointer-events: none;
+  }
+  .widget:hover .w-actions,
+  .widget .w-actions.open,
+  .widget .w-actions:focus-within { opacity: 1; pointer-events: auto; }
+  .widget .w-actions .w-abtn {
+    width: 22px; height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    background: rgba(10, 14, 26, 0.6);
+    backdrop-filter: blur(4px);
+    color: var(--text-2);
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    transition: all var(--t-fast) var(--ease);
+  }
+  .widget .w-actions .w-abtn:hover {
+    background: var(--panel-3);
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .widget .w-actions .w-abtn.danger:hover { color: var(--bad); border-color: rgba(248, 113, 113, 0.4); }
+  /* Body has extra top padding only when actions are visible — but we overlay */
+  .widget .body {
+    flex: 1;
+    overflow: auto;
+    padding: 14px 16px;
+    position: relative;
+  }
+
+  /* Custom context menu (right-click) */
+  .ctx-menu {
+    position: fixed;
+    background: var(--panel-solid);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    padding: 4px;
+    min-width: 200px;
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+    font-size: 13px;
+    animation: ctx-fade-in 120ms var(--ease-out);
+  }
+  @keyframes ctx-fade-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  .ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    color: var(--text-2);
+    transition: background var(--t-fast) var(--ease);
+    user-select: none;
+  }
+  .ctx-item:hover { background: var(--panel-3); color: var(--text); }
+  .ctx-item.danger { color: var(--bad); }
+  .ctx-item.danger:hover { background: rgba(248, 113, 113, 0.12); }
+  .ctx-icon { width: 16px; text-align: center; opacity: 0.7; }
+  .ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ============================================================
+     Weather widget
+     ============================================================ */
+  .w-weather .body { display: flex; flex-direction: column; gap: 8px; }
+  .w-weather .wx-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .w-weather .wx-icon {
+    width: 56px;
+    height: 56px;
+    color: var(--accent);
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+    flex-shrink: 0;
+  }
+  .w-weather .wx-icon svg { width: 100%; height: 100%; }
+  .w-weather .temp {
+    font-size: calc(56px * var(--fs-scale));
+    font-weight: 200;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    background: linear-gradient(180deg, var(--text) 0%, var(--text-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .w-weather .cond { color: var(--muted); font-size: calc(13px * var(--fs-scale)); font-weight: 500; }
+  .w-weather .meta { display: flex; gap: 14px; color: var(--muted); font-size: calc(12px * var(--fs-scale)); flex-wrap: wrap; }
+  .w-weather .meta span b { color: var(--text-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .w-weather .strip { display: flex; gap: 4px; margin-top: 6px; }
+  .w-weather .day {
+    flex: 1;
+    text-align: center;
+    background: var(--panel-2);
+    border-radius: var(--r-sm);
+    padding: 6px 2px;
+    font-size: calc(10px * var(--fs-scale));
+    color: var(--muted);
+    border: 1px solid transparent;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .w-weather .day:hover { background: var(--panel-3); border-color: var(--border); }
+  .w-weather .day b { display: block; color: var(--text); font-size: calc(12px * var(--fs-scale)); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .w-weather .day .d-icon {
+    width: 22px; height: 22px;
+    color: var(--accent);
+    margin: 2px auto;
+  }
+  .w-weather .day .d-icon svg { width: 100%; height: 100%; }
+  /* Weather responsive (via [data-size] attribute) */
+  /* Tiny: icon + temp only, no meta, no strip, no desc */
+  .grid-stack-item.w-weather[data-size="tiny"]  .w-weather .meta,
+  .grid-stack-item.w-weather[data-size="tiny"]  .w-weather .strip,
+  .grid-stack-item.w-weather[data-size="tiny"]  .w-weather .cond,
+  .grid-stack-item.w-weather[data-size="tiny"]  .w-weather .updated { display: none; }
+  .grid-stack-item.w-weather[data-size="tiny"]  .w-weather .wx-temp { font-size: calc(36px * var(--fs-scale)); }
+  .grid-stack-item.w-weather[data-size="tiny"]  .w-weather .body { padding: 12px; justify-content: center; }
+  .grid-stack-item.w-weather[data-size="tiny"]  .w-weather .wx-top { flex-direction: column; gap: 8px; align-items: flex-start; }
+  /* Narrow: + desc + meta */
+  .grid-stack-item.w-weather[data-size="narrow"] .w-weather .strip,
+  .grid-stack-item.w-weather[data-size="narrow"] .w-weather .updated { display: none; }
+  /* Normal: + meta + maybe strip on tall widgets */
+  .grid-stack-item.w-weather[data-size="normal"] .w-weather .updated { display: none; }
+  /* Wide: full content */
+  .grid-stack-item.w-weather[data-size="wide"] .w-weather .wx-temp { font-size: calc(72px * var(--fs-scale)); }
+  .grid-stack-item.w-weather[data-size="xlarge"] .w-weather .wx-temp { font-size: calc(88px * var(--fs-scale)); }
+  .grid-stack-item.w-weather[data-size="xlarge"] .w-weather .meta { font-size: calc(14px * var(--fs-scale)); }
+  .w-weather .day .bar {
+    height: 3px;
+    border-radius: var(--r-full);
+    margin-top: 4px;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+    opacity: 0.7;
+  }
+  .w-weather .updated {
+    color: var(--muted-2);
+    font-size: calc(10px * var(--fs-scale));
+    margin-top: auto;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .w-warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: var(--r-sm);
+    padding: 5px 10px;
+    font-size: calc(12px * var(--fs-scale));
+    font-weight: 500;
+  }
+
+  /* ============================================================
+     Clock widget
+     ============================================================ */
+  .w-clock .body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px;
+    overflow: hidden;
+    min-height: 0;
+    height: 100%;
+  }
+  .w-clock .time {
+    font-weight: 200;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, var(--text) 0%, var(--text-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .w-clock .date { color: var(--muted); font-size: calc(13px * var(--fs-scale)); font-weight: 500; }
+  .w-clock .lunar { color: var(--muted-2); font-size: calc(11px * var(--fs-scale)); }
+  .grid-stack-item.w-clock.style-hero .w-clock .time { font-size: calc(72px * var(--fs-scale)); }
+  .grid-stack-item.w-clock.style-compact .w-clock .time { font-size: calc(40px * var(--fs-scale)); }
+  .grid-stack-item.w-clock.style-minimal .w-clock .body { gap: 2px; }
+
+  /* Clock responsive: applied via [data-size] attribute set by ResizeObserver */
+  /* Tiny: time only (HH:MM, no seconds, no date, no lunar) */
+  .grid-stack-item.w-clock[data-size="tiny"]  .w-clock .time { font-size: calc(32px * var(--fs-scale)); line-height: 1; }
+  .grid-stack-item.w-clock[data-size="tiny"]  .w-clock .date,
+  .grid-stack-item.w-clock[data-size="tiny"]  .w-clock .lunar { display: none !important; }
+  .grid-stack-item.w-clock[data-size="tiny"]  .w-clock .body { gap: 0; padding: 6px 8px; overflow: hidden; min-height: 0; }
+  /* Narrow: time + date, no lunar */
+  .grid-stack-item.w-clock[data-size="narrow"] .w-clock .time { font-size: calc(40px * var(--fs-scale)); }
+  .grid-stack-item.w-clock[data-size="narrow"] .w-clock .lunar { display: none; }
+  .grid-stack-item.w-clock[data-size="narrow"] .w-clock .date { font-size: calc(11px * var(--fs-scale)); }
+  /* Wide: time + date + lunar, larger time */
+  .grid-stack-item.w-clock[data-size="wide"]  .w-clock .time { font-size: calc(96px * var(--fs-scale)); }
+
+  /* ============================================================
+     News widget
+     ============================================================ */
+  .grid-stack-item.w-news .w-news .body { padding: 0; display: flex; flex-direction: column; min-height: 0; }
+  .grid-stack-item.w-news .w-news .body .news-list { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+  /* When marquee mode is on, the entire list scrolls vertically automatically.
+     List HTML is duplicated (innerHTML) so the scroll loops seamlessly via translateY(-50%). */
+  .grid-stack-item.w-news .w-news .body .news-list.marquee-mode {
+    overflow: hidden;
+  }
+  .grid-stack-item.w-news .w-news .body .news-list.marquee-mode .inner-track {
+    display: block;
+    animation: news-list-scroll var(--marquee-duration, 60s) linear infinite;
+    will-change: transform;
+  }
+  .grid-stack-item.w-news .w-news .body .news-list.marquee-mode:hover .inner-track {
+    animation-play-state: paused;
+  }
+  /* Highlight the hovered item when scrolling is paused */
+  .grid-stack-item.w-news .w-news .body .news-list.marquee-mode .item:hover {
+    background: var(--panel-2);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .grid-stack-item.w-news .w-news .body .news-list.marquee-mode .item:hover .title-line {
+    color: var(--accent-2);
+  }
+  @keyframes news-list-scroll {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+  /* Edge fade for marquee mode */
+  .grid-stack-item.w-news .w-news .body .news-list.marquee-mode {
+    mask-image: linear-gradient(180deg, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%);
+  }
+  .w-news .item {
+    display: block;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: calc(13px * var(--fs-scale));
+    line-height: 1.5;
+    cursor: pointer;
+    color: var(--text);
+    text-decoration: none;
+    transition: background var(--t-fast) var(--ease);
+    position: relative;
+  }
+  .w-news .item:last-child { border-bottom: none; }
+  .w-news .item:hover { background: var(--panel-2); }
+  .w-news .item:hover .title-line { color: var(--accent-2); }
+  .w-news .item .tags {
+    display: inline-flex;
+    gap: 4px;
+    margin-right: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    vertical-align: middle;
+  }
+  .w-news .item .src,
+  .w-news .item .cat-tag,
+  .w-news .item .lang-tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: calc(10px * var(--fs-scale));
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: var(--r-sm);
+    color: white;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+  .w-news .item .cat-tag { color: white; }
+  .w-news .item .lang-tag {
+    background: var(--panel-3) !important;
+    color: var(--text-2) !important;
+    border: 1px solid var(--border-strong);
+  }
+  .w-news .item .lang-tag.lang-zh::before { content: ""; }
+  .w-news .item .lang-tag.lang-en::before { content: ""; }
+  .w-news .item .title-line {
+    display: inline;
+    font-weight: 500;
+    transition: color var(--t-fast) var(--ease);
+  }
+  .grid-stack-item[data-size="tiny"] .widget .body { padding: 6px 8px; overflow: hidden; min-height: 0; }
+  /* Tiny widgets: force the time (clock) to not overflow its container */
+  .grid-stack-item[data-size="tiny"].w-clock .w-clock .body > * { flex-shrink: 0; max-width: 100%; }
+  .grid-stack-item[data-size="tiny"].w-clock .w-clock .time { white-space: nowrap; }
+  .w-news .item .ts {
+    color: var(--muted-2);
+    font-size: calc(11px * var(--fs-scale));
+    margin-left: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  /* News responsive: applied via [data-size] attribute set by ResizeObserver */
+  .grid-stack-item.w-news[data-size="tiny"] .w-news .item .lang-tag,
+  .grid-stack-item.w-news[data-size="tiny"] .w-news .item .ts { display: none; }
+  .grid-stack-item.w-news[data-size="wide"] .w-news .body .news-list:not(.marquee-mode) {
+    column-count: 2;
+    column-gap: 0;
+  }
+  .grid-stack-item.w-news[data-size="wide"] .w-news .body .news-list:not(.marquee-mode) .item {
+    break-inside: avoid;
+    border-right: 1px solid var(--border);
+  }
+  .grid-stack-item.w-news[data-size="xlarge"] .w-news .body .news-list:not(.marquee-mode) {
+    column-count: 3;
+  }
+
+  /* ============================================================
+     Note widget
+     ============================================================ */
+  .w-note .body { padding: 0; }
+  .w-note textarea {
+    width: 100%; height: 100%;
+    background: transparent;
+    color: var(--text);
+    border: none;
+    outline: none;
+    resize: none;
+    font: inherit;
+    padding: 14px 16px;
+    line-height: 1.6;
+  }
+  .w-note textarea::placeholder { color: var(--muted-2); }
+  .grid-stack-item.w-note.size-sm .w-note textarea { font-size: calc(12px * var(--fs-scale)); }
+  .grid-stack-item.w-note.size-md .w-note textarea { font-size: calc(14px * var(--fs-scale)); }
+  .grid-stack-item.w-note.size-lg .w-note textarea { font-size: calc(18px * var(--fs-scale)); line-height: 1.7; }
+
+  /* ============================================================
+     News widget — selected cats in body (top), marquee
+     ============================================================ */
+  .w-news > .w-head .selected-cats,
+  .grid-stack-item.w-news .w-news .body .selected-cats {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .w-news > .w-head .selected-cats .scat,
+  .grid-stack-item.w-news .w-news .body .selected-cats .scat {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: var(--r-full);
+    background: var(--panel-3);
+    color: var(--text-2);
+    border: 1px solid var(--border-strong);
+    letter-spacing: 0.02em;
+  }
+
+  /* ============================================================
+     GridStack theming — resize handles
+     ============================================================ */
+  .grid-stack-item-content {
+    inset: 0 !important;
+    border-radius: var(--r-lg) !important;
+    display: flex;
+  }
+  .grid-stack-item-content > .widget {
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+  }
+  /* Mount animation: fade in + slide up */
+  @keyframes widget-mount-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+  }
+  .grid-stack-item.ui-draggable-dragging .widget,
+  .grid-stack-item.ui-resizable-resizing .widget { animation: none; }
+  .grid-stack > .grid-stack-item:not(.ui-draggable-dragging):not(.ui-resizable-resizing) .widget {
+    animation: widget-mount-in 280ms var(--ease-out) both;
+  }
+
+
+  /* ============================================================
+     Resize affordance — custom corner indicator + hover glow
+     (GridStack v11 handles drag/resize via mouse position; we add
+      a visual corner indicator since v11 doesn't render handles)
+     ============================================================ */
+  .grid-stack-item .resize-corner {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 16px; height: 16px;
+    pointer-events: none;
+    cursor: se-resize;
+    z-index: 6;
+    background:
+      linear-gradient(135deg, transparent 50%, var(--muted) 50%);
+    opacity: 0;
+    transition: opacity var(--t-fast) var(--ease);
+  }
+  .grid-stack-item:hover .resize-corner { opacity: 0.7; }
+  .grid-stack-item .resize-corner:hover { opacity: 1; background: linear-gradient(135deg, transparent 50%, var(--accent) 50%); }
+
+  /* ============================================================
+     Modal
+     ============================================================ */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(5, 8, 16, 0.65);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: modal-fade-in 200ms var(--ease-out);
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--panel-solid);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    min-width: 360px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow: auto;
+    box-shadow: var(--shadow-lg);
+    animation: modal-scale-in 200ms var(--ease-out);
+  }
+  @keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes modal-scale-in { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .modal h3 { margin: 0 0 16px 0; font-size: calc(15px * var(--fs-scale)); font-weight: 600; letter-spacing: -0.01em; }
+  .picker { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .picker button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--r-md);
+    padding: 18px 12px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 500;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .picker button:hover {
+    background: var(--panel-3);
+    border-color: var(--border-accent);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-accent);
+  }
+  .picker button:active { transform: translateY(0); }
+  .picker .glyph { font-size: calc(28px * var(--fs-scale)); display: block; margin-bottom: 6px; }
+  .modal .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .field label {
+    font-size: calc(11px * var(--fs-scale));
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .field input[type=text], .field select {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--r-sm);
+    padding: 8px 10px;
+    font: inherit;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .field input[type=text]:focus, .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: 5px 12px;
+    border-radius: var(--r-full);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: calc(12px * var(--fs-scale));
+    font-weight: 500;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .chip:hover { color: var(--text-2); border-color: var(--border-strong); }
+  .chip.on {
+    background: var(--accent-soft);
+    color: var(--accent-2);
+    border-color: var(--accent);
+  }
+  .chip.source-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip.source-chip .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .chip.source-chip .badge {
+    font-size: calc(9px * var(--fs-scale));
+    padding: 1px 5px;
+    border-radius: var(--r-sm);
+    background: rgba(255,255,255,0.08);
+    color: inherit;
+    opacity: 0.7;
+  }
+  .chip.source-chip:not(.on) .dot { opacity: 0.4; }
+  .bg-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+  .bg-swatches .swatch {
+    width: 28px; height: 28px;
+    border-radius: var(--r-full);
+    border: 2px solid var(--border);
+    background: var(--swatch-color, var(--panel-2));
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: calc(14px * var(--fs-scale));
+    transition: all var(--t-fast) var(--ease);
+    position: relative;
+  }
+  .bg-swatches .swatch:hover { transform: scale(1.1); border-color: var(--border-strong); }
+  .bg-swatches .swatch.on {
+    border-color: var(--text);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .bg-swatches .swatch.on::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-size: calc(14px * var(--fs-scale));
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+
+  /* Per-widget font size slider */
+  .fs-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: var(--panel-2);
+    border-radius: var(--r-full);
+    border: 1px solid var(--border);
+    outline: none;
+    margin: 8px 0 4px;
+  }
+  .fs-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    transition: box-shadow var(--t-fast) var(--ease);
+  }
+  .fs-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px var(--accent-soft); }
+  .fs-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .fs-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted-2);
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+  .fs-tick {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+  }
+  .fs-tick:hover { color: var(--text-2); }
+  .fs-tick.on {
+    color: var(--accent-2);
+    background: var(--accent-soft);
+  }
+  .seg {
+    display: inline-flex;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 2px;
+    gap: 2px;
+  }
+  .seg button {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    padding: 5px 12px;
+    cursor: pointer;
+    font: inherit;
+    font-size: calc(12px * var(--fs-scale));
+    font-weight: 500;
+    border-radius: var(--r-sm);
+    transition: all var(--t-fast) var(--ease);
+  }
+  .seg button:hover { color: var(--text-2); }
+  .seg button.on {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 1px 3px var(--accent-glow);
+  }
+
+  /* Save button (primary in settings modal) */
+  #settingsOk {
+    background: var(--accent) !important;
+    color: white !important;
+    border-color: var(--accent) !important;
+  }
+  #settingsOk:hover {
+    background: var(--accent-2) !important;
+    border-color: var(--accent-2) !important;
+    box-shadow: 0 4px 12px var(--accent-glow);
+  }
+
+  /* ============================================================
+     Empty state
+     ============================================================ */
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 80px 24px;
+    border: 2px dashed var(--border);
+    border-radius: var(--r-lg);
+    margin: 24px;
+  }
+  .empty::before {
+    content: '⊞';
+    display: block;
+    font-size: calc(48px * var(--fs-scale));
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">⌘ Dashboard</div>
+  <div class="tabs" id="tabs"></div>
+  <div class="menu" id="fontMenu" style="position:relative;">
+    <button class="tool" id="fontBtn" title="字體">字體 ▾</button>
+    <div class="menu-list" style="left:auto;right:0;">
+      <div class="menu-item" data-font="">系統</div>
+      <div class="menu-item" data-font="serif">襯線</div>
+      <div class="menu-item" data-font="mono">等寬</div>
+    </div>
+  </div>
+  <div class="menu" id="themeMenu" style="position:relative;">
+    <button class="tool" id="themeBtn" title="主題">🎨 ▾</button>
+    <div class="menu-list" style="left:auto;right:0;min-width:140px;">
+      <div class="menu-item" data-theme="">indigo</div>
+      <div class="menu-item" data-theme="emerald">emerald</div>
+      <div class="menu-item" data-theme="rose">rose</div>
+      <div class="menu-item" data-theme="amber">amber</div>
+      <div class="menu-item" data-theme="cyan">cyan</div>
+      <div class="menu-item" data-theme="slate">slate</div>
+    </div>
+  </div>
+  <button class="tool" id="modeBtn" title="切換深淺色">🌙</button>
+  <div class="menu" id="fsMenu" style="position:relative;">
+    <button class="tool" id="fsBtn" title="字體大小">大小 ▾</button>
+    <div class="menu-list" style="left:auto;right:0;">
+      <div class="menu-item" data-fs="">正常</div>
+      <div class="menu-item" data-fs="compact">緊湊</div>
+      <div class="menu-item" data-fs="spacious">寬鬆</div>
+      <div class="menu-item" data-fs="roomy">特大</div>
+    </div>
+  </div>
+  <button class="tool" id="addWidgetBtn" title="加 widget">+ Widget</button>
+  <button class="tool" id="arrangeBtn" title="自動排列（往上收緊）">⊞ 排列</button>
+  <div class="menu" id="pageMenu">
+    <button class="tool">Page ▾</button>
+    <div class="menu-list">
+      <div class="menu-item" data-act="add-page">＋ 新增 Page</div>
+      <div class="menu-item" data-act="rename-page">✎ 改呢個 Page 名</div>
+      <div class="menu-sep"></div>
+      <div class="menu-item" data-act="clear-page">🗑 清空呢個 Page</div>
+      <div class="menu-item" data-act="delete-page">✕ 刪除呢個 Page</div>
+      <div class="menu-sep"></div>
+      <div class="menu-item" data-act="reset-all">⚠ 重設全部（清 localStorage）</div>
+    </div>
+  </div>
+</header>
+
+<div class="grid-wrap" id="gridWrap">
+  <div class="grid-stack" id="grid"></div>
+  <div class="empty" id="empty" style="display:none">呢個 Page 未擺任何 widget。撳「+ Widget」加一個。</div>
+</div>
+
+<!-- Add-widget modal -->
+<div class="modal-bg" id="picker">
+  <div class="modal">
+    <h3>加邊種 widget？</h3>
+    <div class="picker">
+      <button data-type="weather"><span class="glyph">⛅</span>天氣</button>
+      <button data-type="clock"><span class="glyph">🕒</span>時鐘</button>
+      <button data-type="news"><span class="glyph">📰</span>新聞</button>
+      <button data-type="note"><span class="glyph">📝</span>便條</button>
+    </div>
+    <div class="actions">
+      <button class="tool" id="pickerClose">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Per-widget settings modal -->
+<div class="modal-bg" id="settings">
+  <div class="modal">
+    <h3 id="settingsTitle">Widget 設定</h3>
+    <div id="settingsBody"></div>
+    <div class="actions">
+      <button class="tool" id="settingsCancel">取消</button>
+      <button class="tool" id="settingsOk" style="background:var(--accent);border-color:var(--accent);color:white;">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   State
+   ============================================================ */
+const STORAGE_KEY = "dashproto_v2";
+const COLS = 12;
+const ROW_HEIGHT = 60; // px
+
+let state = loadState();
+
+function defaultState() {
+  return {
+    pages: [
+      { id: pid(), name: "Home", items: [
+        { id: pid(), type: "weather", x: 0, y: 0, w: 5, h: 4, cfg: { place: "香港天文台", showWarn: true } },
+        { id: pid(), type: "clock",   x: 5, y: 0, w: 4, h: 4, cfg: { style: "hero", hour24: true, showLunar: true } },
+        { id: pid(), type: "news",    x: 9, y: 0, w: 3, h: 6, cfg: { cats: ["local","intl","tech"], lang: "all", autoRefresh: true, marquee: false, marqueeSpeed: "normal" } },
+        { id: pid(), type: "note",    x: 0, y: 4, w: 9, h: 3, cfg: { text: "TODO:\n- 寫 prototype\n- 試 drag/resize\n- Page 切換", size: "md" } },
+      ]},
+      { id: pid(), name: "工作", items: [
+        { id: pid(), type: "news", x: 0, y: 0, w: 6, h: 6, cfg: { cats: ["tech","intl"], lang: "en", autoRefresh: true, marquee: true, marqueeSpeed: "normal" } },
+        { id: pid(), type: "note", x: 6, y: 0, w: 6, h: 4, cfg: { text: "TODO:\n- 寫 prototype\n- 試 drag/resize", size: "md" } },
+      ]},
+    ],
+    activePage: 0,
+    mode: "dark",     // "dark" | "light"
+    theme: "",        // "" (default indigo) | "emerald" | "rose" | "amber" | "cyan" | "slate"
+    font:  "",        // "" (system) | "serif" | "mono"
+    fontSize: "",     // "" (normal) | "compact" | "spacious" | "roomy"
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return defaultState();
+}
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+function pid() { return "x" + Math.random().toString(36).slice(2, 9); }
+function currentPage() { return state.pages[state.activePage]; }
+function findItem(id) { return currentPage().items.find(x => x.id === id); }
+
+/* ============================================================
+   Tabs
+   ============================================================ */
+const tabsEl = document.getElementById("tabs");
+function renderTabs() {
+  tabsEl.innerHTML = "";
+  state.pages.forEach((p, i) => {
+    const el = document.createElement("div");
+    el.className = "tab" + (i === state.activePage ? " active" : "");
+    el.innerHTML = `<span class="name"></span><span class="x" title="刪除 page">✕</span>`;
+    el.querySelector(".name").textContent = p.name;
+    el.addEventListener("click", (e) => {
+      if (e.target.classList.contains("x")) {
+        if (state.pages.length === 1) { alert("最少要一個 page"); return; }
+        if (!confirm(`刪除 page「${p.name}」？`)) return;
+        state.pages.splice(i, 1);
+        if (state.activePage >= state.pages.length) state.activePage = state.pages.length - 1;
+        saveState(); renderTabs(); mountPage();
+      } else {
+        state.activePage = i; saveState(); renderTabs(); mountPage();
+      }
+    });
+    tabsEl.appendChild(el);
+  });
+}
+
+/* ============================================================
+   Page menu
+   ============================================================ */
+const pageMenuEl = document.getElementById("pageMenu");
+pageMenuEl.querySelector("button").addEventListener("click", (e) => {
+  e.stopPropagation();
+  pageMenuEl.classList.toggle("open");
+});
+document.addEventListener("click", () => {
+  document.getElementById("pageMenu").classList.remove("open");
+  document.getElementById("themeMenu").classList.remove("open");
+  document.getElementById("fontMenu").classList.remove("open");
+});
+pageMenuEl.addEventListener("click", (e) => {
+  const t = e.target.closest(".menu-item");
+  if (!t) return;
+  pageMenuEl.classList.remove("open");
+  const act = t.dataset.act;
+  if (act === "add-page") {
+    const name = prompt("新 page 名", "Page " + (state.pages.length + 1));
+    if (!name) return;
+    state.pages.push({ id: pid(), name, items: [] });
+    state.activePage = state.pages.length - 1;
+    saveState(); renderTabs(); mountPage();
+  } else if (act === "rename-page") {
+    const p = currentPage();
+    const name = prompt("改 page 名", p.name);
+    if (!name) return;
+    p.name = name; saveState(); renderTabs();
+  } else if (act === "clear-page") {
+    if (!confirm("清空呢個 page 所有 widget？")) return;
+    currentPage().items = [];
+    saveState(); mountPage();
+  } else if (act === "delete-page") {
+    if (state.pages.length === 1) { alert("最少要一個 page"); return; }
+    if (!confirm("刪除呢個 page？")) return;
+    state.pages.splice(state.activePage, 1);
+    if (state.activePage >= state.pages.length) state.activePage = state.pages.length - 1;
+    saveState(); renderTabs(); mountPage();
+  } else if (act === "reset-all") {
+    if (!confirm("重設全部（包括 localStorage）？")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = defaultState();
+    renderTabs(); mountPage();
+  }
+});
+
+/* ============================================================
+   Grid
+   ============================================================ */
+const gridEl = document.getElementById("grid");
+const emptyEl = document.getElementById("empty");
+let grid = null;
+let suppressChange = false;
+
+function mountPage() {
+  suppressChange = true;
+  if (grid) { grid.destroy(false); grid = null; }
+  gridEl.innerHTML = "";
+  const page = currentPage();
+  emptyEl.style.display = page.items.length ? "none" : "block";
+
+  grid = GridStack.init({
+    column: COLS,
+    cellHeight: ROW_HEIGHT,
+    margin: 8,
+    float: true,
+    animate: true,
+    disableOneColumnMode: true,
+    handle: '.widget',  // entire widget body is the drag handle (no header)
+    resizable: { handles: 'se, s, e' },   // SE corner, bottom edge, right edge
+    minRow: 1,
+    placeholderClass: 'grid-stack-placeholder',
+    placeholderText: '',
+  }, gridEl);
+  // Make the .grid-stack-item itself be relative so the content layer is contained
+  gridEl.classList.add('gs-container');
+  // Sync gridline CSS variables
+  gridEl.style.setProperty('--row-h', ROW_HEIGHT + 'px');
+  gridEl.style.setProperty('--margin', '8px');
+  // Highlight stronger gridlines during drag/resize
+  grid.on('dragstart resizestart', () => gridEl.classList.add('is-snapping'));
+  grid.on('dragstop resizestop',  () => gridEl.classList.remove('is-snapping'));
+
+  // Initial gridline render + on resize
+  drawGridlines();
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => drawGridlines());
+    ro.observe(gridEl);
+  } else {
+    window.addEventListener('resize', drawGridlines);
+  }
+
+  // Update placeholder with current cell coords while dragging/resizing
+  function updatePlaceholderCoord() {
+    const ph = gridEl.querySelector('.grid-stack-placeholder');
+    if (!ph) return;
+    const w = parseInt(ph.getAttribute('gs-w') || '0', 10);
+    const h = parseInt(ph.getAttribute('gs-h') || '0', 10);
+    const x = parseInt(ph.getAttribute('gs-x') || '0', 10);
+    const y = parseInt(ph.getAttribute('gs-y') || '0', 10);
+    ph.setAttribute('data-coord', `col ${x + 1}–${x + w} · row ${y + 1}–${y + h} · ${w}×${h}`);
+  }
+  grid.on('change', updatePlaceholderCoord);
+
+  grid.on("change added removed", () => {
+    if (suppressChange) return;
+    const items = [];
+    grid.engine.nodes.forEach(n => {
+      const it = n.id ? currentPage().items.find(x => x.id === n.id) : null;
+      if (it) {
+        it.x = n.x; it.y = n.y; it.w = n.w; it.h = n.h;
+        items.push(it);
+      }
+    });
+    if (items.length) {
+      currentPage().items = items;
+      saveState();
+    }
+    emptyEl.style.display = currentPage().items.length ? "none" : "block";
+    drawGridlines();
+  });
+
+  page.items.forEach(it => mountItem(it));
+  // Re-enable after microtask so any synchronously-fired change events during init are ignored
+  setTimeout(() => { suppressChange = false; }, 0);
+}
+
+function mountItem(it, autoPos = false) {
+  const el = document.createElement("div");
+  el.className = "grid-stack-item " + (it.type ? ("w-" + it.type) : "");
+  el.dataset.id = it.id;
+  if (it.bg) el.dataset.bg = it.bg;  // per-widget background color theme
+  if (it.fs) el.dataset.fs = String(it.fs);  // per-widget font-size scale
+  const content = document.createElement("div");
+  content.className = "grid-stack-item-content";
+  const widgetEl = renderWidget(it, el);
+  content.appendChild(widgetEl);
+  el.appendChild(content);
+  gridEl.appendChild(el);
+  const limits = widgetLimits(it.type);
+  const opts = {
+    w: it.w, h: it.h, id: it.id, autoPosition: !!autoPos,
+    minW: limits.minW, minH: limits.minH,
+    maxW: limits.maxW, maxH: limits.maxH,
+  };
+  if (!autoPos) { opts.x = it.x; opts.y = it.y; }
+  grid.makeWidget(el, opts);
+}
+
+/* Per-type size limits. 1×1 minimum (snap to grid). No max — user can grow arbitrarily. */
+function widgetLimits(type) {
+  switch (type) {
+    case "weather": return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
+    case "clock":   return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
+    case "news":    return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
+    case "note":    return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
+    default:        return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
+  }
+}
+
+/* ============================================================
+   Widget rendering
+   ============================================================ */
+function renderWidget(item, itemEl) {
+  const el = document.createElement("div");
+  el.className = "widget w-" + item.type;
+  el.dataset.id = item.id;
+  // Modern borderless design: no header, just a floating action button cluster
+  el.innerHTML = `
+    <div class="w-actions" data-actions>
+      <span class="w-abtn" data-act="settings" title="設定 (右擊 或點此)">⚙</span>
+      <span class="w-abtn danger" data-act="remove" title="刪除">✕</span>
+    </div>
+    <div class="resize-corner" aria-hidden="true"></div>
+    <div class="body"></div>`;
+  // Stop drag handle when clicking action buttons
+  el.querySelectorAll('.w-abtn').forEach(b => b.addEventListener('mousedown', e => e.stopPropagation()));
+  el.querySelector('[data-act="settings"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    openSettings(item);
+  });
+  el.querySelector('[data-act="remove"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!confirm("刪除呢個 widget？")) return;
+    removeWidget(item);
+  });
+  // Right-click context menu
+  el.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showContextMenu(e.clientX, e.clientY, item, el);
+  });
+  // Inject news-specific selected-cats tags (news only) into the body, top-right area
+  if (item.type === "news" && item.cfg.cats && item.cfg.cats.length) {
+    const body = el.querySelector(".body");
+    if (body) {
+      const sc = document.createElement("div");
+      sc.className = "selected-cats";
+      sc.innerHTML = item.cfg.cats.map(c =>
+        `<span class="scat" style="border-color:${CAT_TAG_COLOR[c]||'var(--border-strong)'}40;color:${CAT_TAG_COLOR[c]||'var(--text-2)'}">${CAT_LABEL[c]||c}</span>`
+      ).join("");
+      body.insertBefore(sc, body.firstChild);
+    }
+  }
+  const body = el.querySelector(".body");
+  fillWidgetBody(item, body, el, itemEl);
+  return el;
+}
+
+/* ============================================================
+   Context menu (right-click on widget)
+   ============================================================ */
+function showContextMenu(x, y, item, el) {
+  // Close any existing menu
+  document.querySelectorAll(".ctx-menu").forEach(m => m.remove());
+  const menu = document.createElement("div");
+  menu.className = "ctx-menu";
+  // Build per-type items
+  const items = [];
+  if (item.type === "news") {
+    items.push({ icon: "↻", label: "刷新新聞", act: () => refreshWidget(item) });
+  }
+  items.push({ icon: "⚙", label: "設定", act: () => openSettings(item) });
+  if (item.type === "weather" || item.type === "clock" || item.type === "news" || item.type === "note") {
+    items.push({ sep: true });
+    items.push({ icon: "↕", label: "自動排列所有 widget", act: () => document.getElementById("arrangeBtn").click() });
+  }
+  items.push({ sep: true });
+  items.push({ icon: "⧉", label: "複製 widget", act: () => duplicateWidget(item) });
+  items.push({ icon: "✕", label: "刪除 widget", danger: true, act: () => { if (confirm("刪除呢個 widget？")) removeWidget(item); } });
+  menu.innerHTML = items.map((it, i) => {
+    if (it.sep) return '<div class="ctx-sep"></div>';
+    return `<div class="ctx-item ${it.danger?'danger':''}" data-idx="${i}">
+      <span class="ctx-icon">${it.icon||''}</span>
+      <span>${escapeHtml(it.label)}</span>
+    </div>`;
+  }).join("");
+  // Position with viewport bounds check
+  menu.style.left = "0px"; menu.style.top = "0px";
+  document.body.appendChild(menu);
+  const r = menu.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  menu.style.left = Math.min(x, vw - r.width - 8) + "px";
+  menu.style.top  = Math.min(y, vh - r.height - 8) + "px";
+  // Wire clicks
+  items.forEach((it, i) => {
+    if (it.sep) return;
+    const node = menu.querySelector(`[data-idx="${i}"]`);
+    if (node) node.addEventListener("click", () => { menu.remove(); it.act(); });
+  });
+  // Close on outside click / escape / scroll
+  function close() {
+    if (menu.parentNode) menu.remove();
+    document.removeEventListener("click", close, true);
+    document.removeEventListener("keydown", onKey, true);
+  }
+  function onKey(e) { if (e.key === "Escape") close(); }
+  setTimeout(() => {
+    document.addEventListener("click", close, true);
+    document.addEventListener("keydown", onKey, true);
+  }, 0);
+}
+
+function duplicateWidget(item) {
+  const p = currentPage();
+  const newItem = JSON.parse(JSON.stringify(item));
+  newItem.id = pid();
+  newItem.x = (item.x || 0) + (item.w || 1) + 1;
+  if (newItem.x + newItem.w > 12) newItem.x = 0;
+  newItem.y = (item.y || 0) + 1;
+  p.items.push(newItem);
+  saveState();
+  mountItem(newItem, true);
+}
+
+function removeWidget(item) {
+  const el = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+  if (el) grid.removeWidget(el);
+  // also update state defensively in case the change handler is racy
+  currentPage().items = currentPage().items.filter(x => x.id !== item.id);
+  saveState();
+  emptyEl.style.display = currentPage().items.length ? "none" : "block";
+}
+
+function refreshWidget(item) {
+  if (item.type === "news") {
+    // re-trigger mountNews — find the body and rerun
+    const itemEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+    if (itemEl) {
+      const body = itemEl.querySelector('.body');
+      if (body) {
+        body.innerHTML = `<div style="color:var(--muted);padding:16px;">載入中…</div>`;
+        // call mountNews logic again by emptying and re-firing
+        const fakeEl = document.createElement('div');
+        fillWidgetBody(item, body, fakeEl, itemEl);
+        fakeEl.remove();
+      }
+    }
+  }
+}
+
+function widgetTitle(item) {
+  if (item.type === "weather") return "⛅ " + (item.cfg.place || "天氣");
+  if (item.type === "clock")   return "🕒 時鐘";
+  if (item.type === "news")    return "📰 新聞";
+  if (item.type === "note")    return "📝 便條";
+  return item.type;
+}
+
+function fillWidgetBody(item, body, el, itemEl) {
+  if (item.type === "weather") return mountWeather(item, body, itemEl);
+  if (item.type === "clock")   return mountClock(item, body, itemEl);
+  if (item.type === "news")    return mountNews(item, body, itemEl);
+  if (item.type === "note")    return mountNote(item, body, itemEl);
+}
+
+// HKO weather icon → emoji + short label + line-art SVG (currentColor follows CSS accent)
+// https://www.hko.gov.hk/en/weatherAPI/doc/files/HKO_Open_Data_API_Documentation.pdf
+// All SVGs are 24×24, stroke=1.5, fill=none, currentColor
+const HKO_SVG_SUN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4"/></svg>`;
+const HKO_SVG_SUN_CLOUD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="9" r="3"/><path d="M8 3v1.5M8 13.5V15M3 9h1.5M11.5 9H13M4.5 5.5l1.1 1.1M10.4 11.4l1.1 1.1M4.5 12.5l1.1-1.1M10.4 6.6l1.1-1.1"/><path d="M9 17a4 4 0 0 1 7.5-2 3 3 0 0 1 1 5.8H10a3 3 0 0 1-1-3.8z"/></svg>`;
+const HKO_SVG_CLOUD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A3.5 3.5 0 0 1 18 16H7z"/></svg>`;
+const HKO_SVG_CLOUD_SUN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="6" r="2.5"/><path d="M17 2v1M17 9v1M13 6h1M20 6h1M14.5 3.5l.7.7M18.8 7.8l.7.7M14.5 8.5l.7-.7M18.8 4.2l.7-.7"/><path d="M5 19a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A3.5 3.5 0 0 1 16 17H5z"/></svg>`;
+const HKO_SVG_RAIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A3.5 3.5 0 0 1 18 12H7z"/><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3"/></svg>`;
+const HKO_SVG_HEAVY_RAIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A3.5 3.5 0 0 1 17 11H6z"/><path d="M7 16l-1 3M10 16l-1 3M13 16l-1 3M16 16l-1 3M19 16l-1 3"/></svg>`;
+const HKO_SVG_THUNDER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A3.5 3.5 0 0 1 18 11H7z"/><path d="M12 14l-2 4h3l-1 4 4-6h-3l1-2z" fill="currentColor" fill-opacity="0.15"/></svg>`;
+const HKO_SVG_FOG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 9h16M3 13h18M4 17h16M6 21h12"/></svg>`;
+const HKO_SVG_WIND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8h12a3 3 0 1 0-3-3"/><path d="M3 14h16a3 3 0 1 1-3 3"/><path d="M3 11h7"/></svg>`;
+const HKO_SVG_CYCLONE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M12 4a8 8 0 0 0 0 16M4 12a8 8 0 0 0 8-8M12 20a8 8 0 0 0 8-8M20 12a8 8 0 0 0-8 8"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>`;
+
+const HKO_ICON = {
+   50: { e: "☀️",  svg: HKO_SVG_SUN,         t: "陽光充沛" },
+   51: { e: "🌤️", svg: HKO_SVG_SUN_CLOUD,  t: "陽光充沛 間有雲" },
+   52: { e: "⛅",  svg: HKO_SVG_SUN_CLOUD,  t: "短暫陽光" },
+   53: { e: "🌥️", svg: HKO_SVG_CLOUD_SUN,  t: "短暫陽光 間有雲" },
+   54: { e: "🌥️", svg: HKO_SVG_CLOUD_SUN,  t: "短暫陽光 大致多雲" },
+   60: { e: "⛅",  svg: HKO_SVG_SUN_CLOUD,  t: "多雲 部分時間有陽光" },
+   61: { e: "🌥️", svg: HKO_SVG_CLOUD_SUN,  t: "多雲 短暫陽光" },
+   62: { e: "☁️",  svg: HKO_SVG_CLOUD,      t: "大致多雲" },
+   63: { e: "☁️",  svg: HKO_SVG_CLOUD,      t: "多雲" },
+   64: { e: "🌦️", svg: HKO_SVG_RAIN,        t: "多雲 有幾陣雨" },
+   65: { e: "🌧️", svg: HKO_SVG_RAIN,        t: "多雲 有雨" },
+   70: { e: "🌦️", svg: HKO_SVG_RAIN,        t: "雨 間有陽光" },
+   71: { e: "🌦️", svg: HKO_SVG_RAIN,        t: "雨 短暫陽光" },
+   72: { e: "🌧️", svg: HKO_SVG_RAIN,        t: "有雨" },
+   73: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "雨 有雷暴" },
+   74: { e: "🌧️", svg: HKO_SVG_RAIN,        t: "雨勢頗大" },
+   75: { e: "🌧️", svg: HKO_SVG_HEAVY_RAIN, t: "大雨" },
+   76: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "大雨 有雷暴" },
+   77: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "豪雨" },
+   80: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "雷暴 間有陽光" },
+   81: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "雷暴 多雲" },
+   82: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "雷暴 有雨" },
+   83: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "雷暴 大雨" },
+   84: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "雷暴 豪雨" },
+   85: { e: "⛈️", svg: HKO_SVG_THUNDER,    t: "雷暴 冰雹" },
+   90: { e: "🌀",  svg: HKO_SVG_CYCLONE,    t: "熱帶氣旋" },
+   91: { e: "💨", svg: HKO_SVG_WIND,       t: "大風" },
+   92: { e: "🌫️", svg: HKO_SVG_FOG,        t: "霧" },
+   93: { e: "🌧️", svg: HKO_SVG_HEAVY_RAIN, t: "黃色暴雨" },
+   94: { e: "🌧️", svg: HKO_SVG_HEAVY_RAIN, t: "紅色暴雨" },
+   95: { e: "🌧️", svg: HKO_SVG_HEAVY_RAIN, t: "黑色暴雨" },
+};
+
+const HKO_PLACES = {
+  "京士柏": "京士柏",
+  "香港天文台": "天文台",
+  "黃竹坑": "黃竹坑",
+  "打鼓嶺": "打鼓嶺",
+  "大埔": "大埔",
+  "沙田": "沙田",
+  "屯門": "屯門",
+  "將軍澳": "將軍澳",
+  "西貢": "西貢",
+  "長洲": "長洲",
+  "赤鱲角": "赤鱲角",
+  "青衣": "青衣",
+  "荃灣": "荃灣",
+  "筲箕灣": "筲箕灣",
+  "九龍城": "九龍城",
+  "跑馬地": "跑馬地",
+  "黃大仙": "黃大仙",
+  "赤柱": "赤柱",
+  "觀塘": "觀塘",
+  "深水埗": "深水埗",
+  "啟德": "啟德",
+  "元朗公園": "元朗",
+  "大美督": "大美督",
+};
+
+const HKO_TIMER = new WeakMap();
+
+async function fetchHKO(dataType = "rhrread", lang = "tc") {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const r = await fetch(`/api/hko?dataType=${dataType}&lang=${lang}`, { signal: ctrl.signal });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+  finally { clearTimeout(t); }
+}
+
+function findPlaceValue(data, place) {
+  if (!data) return null;
+  const list = Array.isArray(data) ? data : (data.data || []);
+  // exact match first
+  let m = list.find(x => x.place === place);
+  if (m) return m;
+  // partial match (for "香港天文台" / "京士柏" / etc.)
+  m = list.find(x => x.place && x.place.includes(place));
+  if (m) return m;
+  return list[0] || null;
+}
+
+function mountWeather(item, body, itemEl) {
+  // clear any prior auto-refresh
+  const old = HKO_TIMER.get(itemEl);
+  if (old) clearInterval(old);
+
+  const place = item.cfg.place || "京士柏";
+  const showWarn = item.cfg.showWarn !== false;
+
+  function renderError(msg) {
+    body.innerHTML = `<div style="color:var(--muted);padding:8px;">⚠ ${msg}</div>`;
+  }
+
+  async function load() {
+    if (!body.isConnected) return;
+    body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
+    const [rhr, fnd] = await Promise.all([
+      fetchHKO("rhrread", "tc"),
+      fetchHKO("fnd", "tc"),
+    ]);
+    if (!body.isConnected) return;
+    if (!rhr) { renderError("HKO 連線失敗"); return; }
+    const temp   = findPlaceValue(rhr.temperature, place) || rhr.temperature.data[0];
+    const humid  = findPlaceValue(rhr.humidity,    place) || rhr.humidity.data[0];
+    const uv     = rhr.uvindex && rhr.uvindex.data && rhr.uvindex.data[0];
+    const icon   = (rhr.icon && rhr.icon[0]) || 62;
+    const iconDef = HKO_ICON[icon] || { e: "🌡️", t: "天氣" };
+    const warn   = (rhr.warningMessage || "").trim();
+
+    // 7-day forecast (best-effort)
+    let days = [];
+    if (fnd && fnd.weatherForecast) {
+      const wkMap = { "星期日": "日", "星期一": "一", "星期二": "二", "星期三": "三", "星期四": "四", "星期五": "五", "星期六": "六" };
+      days = fnd.weatherForecast.slice(0, 7).map((d, i) => {
+        const code = parseInt(d.ForecastIcon, 10);
+        const def = HKO_ICON[code] || { e: "🌡️", svg: "" };
+        const min = parseInt(d.forecastMintemp.value, 10);
+        const max = parseInt(d.forecastMaxtemp.value, 10);
+        return { day: wkMap[d.week] || "?", e: def.e, svg: def.svg, t: def.t, max, min, code };
+      });
+    }
+    if (days.length === 0) {
+      // fallback: render placeholder
+      days = Array.from({length: 7}, (_, i) => ({ day: ["一","二","三","四","五","六","日"][i], e: "🌡️", max: "--", min: "--", code: 0 }));
+    }
+
+    body.innerHTML = `
+      <div class="wx-top">
+        <div class="wx-icon">${iconDef.svg}</div>
+        <div class="wx-temp">${temp.value}°</div>
+      </div>
+      <div class="cond">${escapeHtml(iconDef.t)} · ${escapeHtml(place)}</div>
+      ${warn && showWarn ? `<div class="w-warn">${escapeHtml(warn)}</div>` : ""}
+      <div class="meta">
+        <span>體感 <b>${temp.value}°</b></span>
+        <span>濕度 <b>${humid.value}%</b></span>
+        ${uv ? `<span>UV <b>${uv.value} ${escapeHtml(uv.desc || '')}</b></span>` : ""}
+      </div>
+      <div class="strip">
+        ${days.map(d => `
+          <div class="day" title="${escapeHtml(d.t)}">
+            <span>${d.day}</span>
+            <div class="d-icon">${d.svg}</div>
+            <b>${d.max}°</b>
+            <div class="bar" style="width:${30 + (d.max - 25) * 5}%"></div>
+          </div>
+        `).join("")}
+      </div>
+      <div class="updated">更新於 ${new Date(rhr.updateTime).toLocaleTimeString("zh-HK", {hour:"2-digit", minute:"2-digit"})}</div>
+    `;
+  }
+  const tryLoad = () => { if (body.isConnected) load(); };
+  if (body.isConnected) load();
+  else requestAnimationFrame(tryLoad);
+  // auto-refresh every 10 min (HKO updates roughly every 10-30 min)
+  // WeakMap needs live DOM nodes, so defer until itemEl is attached
+  const startRefresh = () => {
+    if (!itemEl.isConnected) return;
+    const old = HKO_TIMER.get(itemEl);
+    if (old) clearInterval(old);
+    const t = setInterval(load, 10 * 60 * 1000);
+    HKO_TIMER.set(itemEl, t);
+    const mo = new MutationObserver(() => {
+      if (!document.body.contains(itemEl)) { clearInterval(t); mo.disconnect(); }
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+  };
+  if (itemEl.isConnected) startRefresh();
+  else requestAnimationFrame(startRefresh);
+}
+
+/* --- Clock (live) --- */
+const clockTimers = new WeakMap();
+function mountClock(item, body, itemEl) {
+  // clear any prior timer on same el
+  const old = clockTimers.get(itemEl);
+  if (old) { clearInterval(old.t); old.mo.disconnect(); }
+  const style = item.cfg.style || "hero";
+  const hour24 = item.cfg.hour24 !== false;
+  const showLunar = item.cfg.showLunar !== false;
+  // apply style classes on the grid-stack-item so CSS can target them
+  itemEl.classList.remove("style-hero","style-compact","style-minimal");
+  itemEl.classList.add("style-" + style);
+  body.innerHTML = `
+    <div class="time">--:--:--</div>
+    <div class="date" ${style === "minimal" ? "style='display:none'" : ""}></div>
+    <div class="lunar" ${showLunar ? "" : "style='display:none'"}>農曆 丙午年 六月</div>
+  `;
+  const tick = () => {
+    const n = new Date();
+    const pad = x => String(x).padStart(2,"0");
+    let h = n.getHours();
+    let suffix = "";
+    if (!hour24) {
+      suffix = h >= 12 ? " PM" : " AM";
+      h = h % 12 || 12;
+    }
+    // Responsive: tiny → HH:MM; narrow+ → HH:MM:SS; wide/xlarge always show seconds
+    const size = itemEl.dataset.size || "normal";
+    const showSec = !["tiny","narrow"].includes(size);
+    const timeStr = showSec
+      ? `${pad(h)}:${pad(n.getMinutes())}:${pad(n.getSeconds())}${suffix}`
+      : `${pad(h)}:${pad(n.getMinutes())}${suffix}`;
+    body.querySelector(".time").textContent = timeStr;
+    const wk = ["日","一","二","三","四","五","六"][n.getDay()];
+    const dEl = body.querySelector(".date");
+    if (dEl && dEl.style.display !== "none") {
+      dEl.textContent = `${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日 星期${wk}`;
+    }
+  };
+  tick();
+  const t = setInterval(tick, 1000);
+  clockTimers.set(itemEl, t);
+  const mo = new MutationObserver(() => { if (!document.body.contains(itemEl)) { clearInterval(t); mo.disconnect(); } });
+  mo.observe(document.body, { childList: true, subtree: true });
+  // Re-render time when widget size attribute changes (responsive)
+  const sizeMo = new MutationObserver(() => tick());
+  sizeMo.observe(itemEl, { attributes: true, attributeFilter: ["data-size"] });
+}
+
+// All known feed sources. Each source has a stable id so users can toggle it in settings.
+const SOURCES = {
+  // local — 香港本地繁中
+  stheadline: { url: "https://www.stheadline.com/rss",                  label: "星島頭條",   lang: "zh", cat: "local", color: "#dc2626" },
+  rfi_zh:     { url: "https://www.chinese.rfi.fr/rss",                  label: "RFI 中文",   lang: "zh", cat: "local", color: "#9333ea" },
+  scmp_hk:    { url: "https://www.scmp.com/rss/2/feed/",                label: "SCMP 香港",  lang: "en", cat: "local", color: "#e11d48" },
+  scmp_china: { url: "https://www.scmp.com/rss/4/feed/",                label: "SCMP 中國",  lang: "en", cat: "intl",  color: "#be123c" },
+  bbc_zh:     { url: "https://feeds.bbci.co.uk/zhongwen/trad/rss.xml",  label: "BBC 中文",   lang: "zh", cat: "local", color: "#fb7185" },
+  scmp:       { url: "https://www.scmp.com/rss/91/feed/",               label: "SCMP",       lang: "en", cat: "intl",  color: "#f43f5e" },
+  // international
+  bbc_world:  { url: "https://feeds.bbci.co.uk/news/world/rss.xml",     label: "BBC World",  lang: "en", cat: "intl",  color: "#2563eb" },
+  scmp_world: { url: "https://www.scmp.com/rss/5/feed/",                label: "SCMP World", lang: "en", cat: "intl",  color: "#1d4ed8" },
+  nyt_world:  { url: "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", label: "NYT World", lang: "en", cat: "intl", color: "#d97706" },
+  guardian:   { url: "https://www.theguardian.com/world/rss",           label: "Guardian",   lang: "en", cat: "intl",  color: "#0d9488" },
+  // tech
+  scmp_tech:  { url: "https://www.scmp.com/rss/36/feed/",               label: "SCMP Tech",  lang: "en", cat: "tech",  color: "#7c3aed" },
+  scmp_biz:   { url: "https://www.scmp.com/rss/92/feed/",               label: "SCMP Biz",   lang: "en", cat: "tech",  color: "#a855f7" },
+  ars:        { url: "https://feeds.arstechnica.com/arstechnica/index", label: "Ars Technica", lang: "en", cat: "tech", color: "#9333ea" },
+  verge:      { url: "https://www.theverge.com/rss/index.xml",          label: "The Verge",  lang: "en", cat: "tech",  color: "#6d28d9" },
+  hn:         { url: "https://hnrss.org/frontpage",                     label: "Hacker News", lang: "en", cat: "tech", color: "#ea580c" },
+  unwire:     { url: "https://unwire.hk/feed",                          label: "unwire.hk",  lang: "zh", cat: "tech",  color: "#0ea5e9" },
+  unwirepro:  { url: "https://unwire.pro/feed",                         label: "unwire.pro", lang: "zh", cat: "tech",  color: "#06b6d4" },
+  qooah:      { url: "https://qooah.com/feed",                          label: "Qooah",      lang: "zh", cat: "tech",  color: "#14b8a6" },
+};
+const CAT_LABEL = { local: "本地", intl: "國際", tech: "科技", finance: "財經", sports: "體育", ai: "AI" };
+const LANG_LABEL = { zh: "繁中", en: "EN", all: "全部" };
+// Tag colors for category chips
+const CAT_TAG_COLOR = { local: "#dc2626", intl: "#2563eb", tech: "#9333ea", finance: "#16a34a", sports: "#f59e0b", ai: "#0ea5e9" };
+// Default source set per category (curated for HK audience)
+const DEFAULT_SOURCES = {
+  local: ["stheadline", "rfi_zh", "bbc_zh", "scmp_hk"],
+  intl:  ["scmp_world", "bbc_world", "nyt_world", "guardian"],
+  tech:  ["scmp_tech", "ars", "verge", "hn", "unwire", "unwirepro"],
+};
+// For fake-data categories, fake items
+const FAKE_SOURCES = { finance: [{id:"fake_fin", label:"Demo", color:"#16a34a"}], sports: [{id:"fake_spt", label:"Demo", color:"#f59e0b"}], ai: [{id:"fake_ai", label:"Demo", color:"#0ea5e9"}] };
+
+// Curated fallback data for non-feed categories (mixed zh + en to look like real feeds)
+const FAKE_NEWS = [
+  { src: "local", cat: "local", srcLabel: "本地", lang: "zh", t: "天文台: 周三起連續四日有驟雨", ts: "10 分鐘前", link: "" },
+  { src: "tech",  cat: "tech",  srcLabel: "科技", lang: "zh", t: "OpenAI 公布 GPT-5o 支援即時多模態", ts: "32 分鐘前", link: "" },
+  { src: "intl",  cat: "intl",  srcLabel: "國際", lang: "zh", t: "聯儲局暗示 9 月或減息 0.25 厘", ts: "1 小時前", link: "" },
+  { src: "tech",  cat: "tech",  srcLabel: "科技", lang: "en", t: "Apple Vision Pro 2 傳聞: 重量減半", ts: "2 小時前", link: "" },
+  { src: "local", cat: "local", srcLabel: "本地", lang: "zh", t: "港鐵東鐵綫訊號系統更新完成", ts: "3 小時前", link: "" },
+  { src: "intl",  cat: "intl",  srcLabel: "國際", lang: "en", t: "Tesla Robotaxi officially launches in Texas trial", ts: "4 小時前", link: "" },
+  { src: "tech",  cat: "tech",  srcLabel: "科技", lang: "zh", t: "Claude 4.5 編程能力追近頂級工程師", ts: "5 小時前", link: "" },
+  { src: "local", cat: "local", srcLabel: "本地", lang: "zh", t: "周末馬拉松封路安排一覽", ts: "昨日", link: "" },
+  // finance
+  { src: "finance", cat: "finance", srcLabel: "財經", lang: "zh", t: "恒指收升 280 點 成交破 1500 億", ts: "1 小時前", link: "" },
+  { src: "finance", cat: "finance", srcLabel: "財經", lang: "en", t: "Hang Seng Index closes up 1.4% on tech rally", ts: "2 小時前", link: "" },
+  // sports
+  { src: "sports", cat: "sports", srcLabel: "體育", lang: "zh", t: "英超: 阿仙奴主場逼和曼城 1-1", ts: "30 分鐘前", link: "" },
+  { src: "sports", cat: "sports", srcLabel: "體育", lang: "en", t: "NBA: Lakers beat Celtics 112-108 in OT thriller", ts: "3 小時前", link: "" },
+  // ai
+  { src: "ai", cat: "ai", srcLabel: "AI", lang: "en", t: "Anthropic ships Claude 4.5 with 1M context window", ts: "1 小時前", link: "" },
+  { src: "ai", cat: "ai", srcLabel: "AI", lang: "zh", t: "百度文心 5.0 發布 多模態能力大幅提升", ts: "2 小時前", link: "" },
+];
+
+const FETCH_TIMEOUT_MS = 10000;
+async function fetchFeed(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const r = await fetch(`/api/feed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.items || [];
+  } catch (e) { return null; }
+  finally { clearTimeout(t); }
+}
+
+function activeSourcesFor(cat, enabled) {
+  if (enabled && Array.isArray(enabled)) {
+    return enabled.map(id => SOURCES[id]).filter(s => s && s.cat === cat);
+  }
+  return (DEFAULT_SOURCES[cat] || []).map(id => SOURCES[id]).filter(Boolean);
+}
+
+async function loadNewsForCfg(cfg) {
+  const cats = (cfg.cats && cfg.cats.length) ? cfg.cats : ["local","intl","tech"];
+  const lang = cfg.lang || "all";
+  const enabled = cfg.enabledSources || null;
+  const all = [];
+  const seen = new Set();
+  for (const c of cats) {
+    const sources = activeSourcesFor(c, enabled).filter(s => lang === "all" || s.lang === lang);
+    if (!sources.length) {
+      // try fake fallback (also honor lang)
+      const fakes = FAKE_NEWS.filter(n => n.cat === c && (lang === "all" || n.lang === lang));
+      fakes.forEach(n => { if (!seen.has(n.t || n.title)) { seen.add(n.t || n.title); all.push({
+        title: n.t, link: n.link, ts: n.ts,
+        cat: c, lang: n.lang, srcId: "fake_" + c, srcLabel: n.srcLabel, color: CAT_TAG_COLOR[c] || "#888",
+      }); } });
+      continue;
+    }
+    const sourcesWithIds = sources.map(s => {
+      const id = Object.keys(SOURCES).find(k => SOURCES[k] === s);
+      return { ...s, id };
+    });
+    const results = await Promise.all(sourcesWithIds.map(s => fetchFeed(s.url).then(items => items ? items.map(it => ({
+      title: it.title, link: it.link, ts: it.ts,
+      cat: c, lang: s.lang, srcId: s.id, srcLabel: s.label, color: s.color,
+    })) : null)));
+    results.forEach(items => {
+      if (!items) return;
+      items.forEach(n => {
+        if (!seen.has(n.title)) { seen.add(n.title); all.push(n); }
+      });
+    });
+  }
+  // Round-robin across sources: take 1 newest from each source, then repeat, until each source exhausted.
+  // This guarantees a balanced mix even if one source is much fresher.
+  const bySource = new Map();
+  all.forEach(n => {
+    if (!bySource.has(n.srcId)) bySource.set(n.srcId, []);
+    bySource.get(n.srcId).push(n);
+  });
+  // Sort each source's items newest-first
+  bySource.forEach(arr => arr.sort((a, b) => {
+    const ta = parseTs(a.ts), tb = parseTs(b.ts);
+    if (ta === Number.MAX_SAFE_INTEGER) return 1;
+    if (tb === Number.MAX_SAFE_INTEGER) return -1;
+    return ta - tb;
+  }));
+  // Round-robin pick
+  const balanced = [];
+  const sourceLists = [...bySource.values()];
+  let added = true;
+  while (added) {
+    added = false;
+    for (const arr of sourceLists) {
+      if (arr.length) { balanced.push(arr.shift()); added = true; }
+    }
+  }
+  return balanced;
+}
+function parseTs(ts) {
+  if (!ts) return Number.MAX_SAFE_INTEGER;
+  // Relative format: "10 分鐘前" / "3 小時前" / "2 日前"
+  const m = String(ts).match(/^(\d+)\s*(秒|分鐘|小時|日)/);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    const unit = m[2];
+    return unit === "秒" ? n : unit === "分鐘" ? n*60 : unit === "小時" ? n*3600 : n*86400;
+  }
+  // ISO 8601 / RFC 2822: try Date.parse
+  const d = Date.parse(ts);
+  if (!isNaN(d)) {
+    return Math.max(0, Math.floor((Date.now() - d) / 1000));
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+
+// Per-widget refresh timers
+const newsTimers = new WeakMap();
+function mountNews(item, body, itemEl) {
+  // Item may not be attached yet. Defer initial load until body is in the DOM.
+  let firstLoadStarted = false;
+  function load() {
+    if (!body.isConnected) return; // body removed mid-flight
+    firstLoadStarted = true;
+    const marqueeOn = item.cfg.marquee === true;
+    // Map speed setting to animation duration (slower = bigger number)
+    const speedMap = { slow: 120, normal: 60, fast: 30 };
+    const duration = speedMap[item.cfg.marqueeSpeed || 'normal'] || 60;
+    body.innerHTML = `<div class="news-list${marqueeOn ? ' marquee-mode' : ''}" style="${marqueeOn ? `--marquee-duration:${duration}s;` : ''}"><div style="color:var(--muted);padding:16px;">載入中…</div></div>`;
+    loadNewsForCfg(item.cfg).then(items => {
+      if (!body.isConnected) return;
+      if (!items.length) {
+        body.innerHTML = `<div class="news-list"><div style="color:var(--muted);padding:16px;">冇新聞</div></div>`;
+        return;
+      }
+      const visible = items.slice(0, 50);
+      const listHTML = visible.map(n => `
+        <a class="item" href="${escapeAttr(n.link || '#')}" target="_blank" rel="noopener">
+          <span class="tags">
+            <span class="src" style="background:${escapeAttr(n.color || '#4f8bff')}">${escapeHtml(n.srcLabel || '')}</span>
+            <span class="cat-tag" style="background:${escapeAttr(CAT_TAG_COLOR[n.cat] || '#4f8bff')}">${escapeHtml(CAT_LABEL[n.cat] || n.cat || '')}</span>
+            <span class="lang-tag lang-${escapeAttr(n.lang || '')}">${escapeHtml(LANG_LABEL[n.lang] || n.lang || '')}</span>
+          </span>
+          <span class="title-line">${escapeHtml(n.title || n.t || '')}</span>
+          <span class="ts">· ${escapeHtml(n.ts || '')}</span>
+        </a>
+      `).join("");
+      // When marquee is on, wrap duplicated list in a single inner div for transform animation
+      let innerHTML;
+      if (marqueeOn) {
+        innerHTML = `<div class="inner-track">${listHTML}${listHTML}</div>`;
+      } else {
+        innerHTML = listHTML;
+      }
+      body.innerHTML = `<div class="news-list${marqueeOn ? ' marquee-mode' : ''}" style="${marqueeOn ? `--marquee-duration:${duration}s;` : ''}">${innerHTML}</div>`;
+    });
+  }
+  // Wait for body to be in DOM, then load. Uses rAF for the not-yet-attached case.
+  const tryLoad = () => { if (body.isConnected && !firstLoadStarted) load(); };
+  if (body.isConnected) load();
+  else requestAnimationFrame(tryLoad);
+  // Auto-refresh every 5 min (only after itemEl is attached, WeakMap needs live nodes)
+  if (item.cfg.autoRefresh !== false) {
+    const startInterval = () => {
+      if (!itemEl.isConnected) return;
+      const old = newsTimers.get(itemEl);
+      if (old) clearInterval(old);
+      const t = setInterval(load, 5 * 60 * 1000);
+      newsTimers.set(itemEl, t);
+      const mo = new MutationObserver(() => {
+        if (!document.body.contains(itemEl)) { clearInterval(t); mo.disconnect(); }
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    };
+    if (itemEl.isConnected) startInterval();
+    else requestAnimationFrame(startInterval);
+  }
+}
+
+function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+
+/* --- Note --- */
+function mountNote(item, body, itemEl) {
+  const size = item.cfg.size || "md";
+  itemEl.classList.remove("size-sm","size-md","size-lg");
+  itemEl.classList.add("size-" + size);
+  body.innerHTML = "";
+  const ta = document.createElement("textarea");
+  ta.placeholder = "寫啲嘢…";
+  ta.value = item.cfg.text || "";
+  ta.addEventListener("input", () => { item.cfg.text = ta.value; saveState(); });
+  body.appendChild(ta);
+}
+
+/* ============================================================
+   Add widget modal
+   ============================================================ */
+const pickerEl = document.getElementById("picker");
+document.getElementById("addWidgetBtn").addEventListener("click", () => pickerEl.classList.add("open"));
+document.getElementById("pickerClose").addEventListener("click", () => pickerEl.classList.remove("open"));
+pickerEl.addEventListener("click", e => { if (e.target === pickerEl) pickerEl.classList.remove("open"); });
+pickerEl.querySelectorAll("button[data-type]").forEach(b => {
+  b.addEventListener("click", () => {
+    const type = b.dataset.type;
+    const sizes = {
+      weather: { w: 5, h: 4 },
+      clock:   { w: 4, h: 4 },
+      news:    { w: 4, h: 5 },
+      note:    { w: 5, h: 4 },
+    }[type];
+    const cfg = {
+      weather: { place: "香港天文台", showWarn: true },
+      clock:   { style: "hero", hour24: true, showLunar: true },
+      news:    { cats: ["local","intl","tech"], lang: "all", autoRefresh: true, marquee: false, marqueeSpeed: "normal" },
+      note:    { text: "", size: "md" },
+    }[type];
+    const item = { id: pid(), type, x: 0, y: 0, w: sizes.w, h: sizes.h, cfg };
+    currentPage().items.push(item);
+    saveState();
+    mountItem(item, true);   // autoPosition: place in first free slot
+    pickerEl.classList.remove("open");
+  });
+});
+
+/* ============================================================
+   Per-widget settings modal
+   ============================================================ */
+const settingsEl = document.getElementById("settings");
+const settingsTitle = document.getElementById("settingsTitle");
+const settingsBody = document.getElementById("settingsBody");
+let editingId = null;
+
+function openSettings(item) {
+  editingId = item.id;
+  settingsTitle.textContent = "設定 · " + widgetTitle(item);
+  settingsBody.innerHTML = renderSettingsForm(item);
+  settingsEl.classList.add("open");
+  bindSettingsForm(item);
+}
+function closeSettings() { settingsEl.classList.remove("open"); editingId = null; }
+document.getElementById("settingsCancel").addEventListener("click", closeSettings);
+document.getElementById("settingsOk").addEventListener("click", () => {
+  // inputs already bound via input/change → saveState + remount
+  closeSettings();
+});
+settingsEl.addEventListener("click", e => { if (e.target === settingsEl) closeSettings(); });
+
+function renderSettingsForm(item) {
+  // Common: per-widget background color (all widget types)
+  const bgOptions = [
+    {v: "",       l: "預設", c: ""},
+    {v: "indigo",  l: "indigo",  c: "#6366f1"},
+    {v: "emerald", l: "emerald", c: "#10b981"},
+    {v: "rose",    l: "rose",    c: "#f43f5e"},
+    {v: "amber",   l: "amber",   c: "#f59e0b"},
+    {v: "cyan",    l: "cyan",    c: "#06b6d4"},
+    {v: "violet",  l: "violet",  c: "#8b5cf6"},
+    {v: "slate",   l: "slate",   c: "#64748b"},
+  ];
+  const bgField = `
+    <div class="field">
+      <label>底色</label>
+      <div class="bg-swatches" id="f-bg">
+        ${bgOptions.map(o => `
+          <button type="button" data-v="${o.v}" class="swatch ${(item.bg||"")===o.v?'on':''}" title="${o.l}"
+                  style="${o.c?`--swatch-color:${o.c}`:''}">
+            ${o.c ? '' : '○'}
+          </button>`).join("")}
+      </div>
+    </div>
+  `;
+  // Per-widget font size slider (0.7 to 1.5)
+  const fsOptions = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5];
+  const currentFs = item.fs || 1.0;
+  const fsField = `
+    <div class="field">
+      <label>字體大小：<span class="fs-value" style="color:var(--accent-2);font-variant-numeric:tabular-nums;">${currentFs.toFixed(2)}×</span></label>
+      <input type="range" id="f-fs" min="0.7" max="1.5" step="0.05" value="${currentFs}" class="fs-slider" />
+      <div class="fs-ticks">${fsOptions.map(v => `<span class="fs-tick ${Math.abs(v-currentFs)<0.01?'on':''}" data-fs="${v}">${v===1?'1.0':v.toFixed(1)}</span>`).join("")}</div>
+    </div>
+  `;
+  if (item.type === "weather") {
+    const place = item.cfg.place || "京士柏";
+    return `
+      ${bgField}
+      ${fsField}
+      <div class="field">
+        <label>地點（HKO 監測站）</label>
+        <select id="f-place">
+          ${Object.keys(HKO_PLACES).map(p => `<option value="${p}" ${p===place?'selected':''}>${p}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label>顯示警告</label>
+        <div class="seg" id="f-showWarn">
+          <button data-v="true" class="${item.cfg.showWarn !== false ? "on":""}">顯示</button>
+          <button data-v="false" class="${item.cfg.showWarn === false ? "on":""}">隱藏</button>
+        </div>
+      </div>
+    `;
+  }
+  if (item.type === "clock") {
+    const style = item.cfg.style || "hero";
+    return `
+      ${bgField}
+      ${fsField}
+      <div class="field">
+        <label>樣式</label>
+        <div class="seg" id="f-style">
+          <button data-v="hero" class="${style==='hero'?'on':''}">大字</button>
+          <button data-v="compact" class="${style==='compact'?'on':''}">細字</button>
+          <button data-v="minimal" class="${style==='minimal'?'on':''}">極簡</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>時間制</label>
+        <div class="seg" id="f-hour24">
+          <button data-v="true" class="${item.cfg.hour24!==false?'on':''}">24 小時</button>
+          <button data-v="false" class="${item.cfg.hour24===false?'on':''}">12 小時</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>農曆</label>
+        <div class="seg" id="f-showLunar">
+          <button data-v="true" class="${item.cfg.showLunar!==false?'on':''}">顯示</button>
+          <button data-v="false" class="${item.cfg.showLunar===false?'on':''}">隱藏</button>
+        </div>
+      </div>
+    `;
+  }
+  if (item.type === "news") {
+    const cats = item.cfg.cats || [];
+    const lang = item.cfg.lang || "all";
+    const enabled = item.cfg.enabledSources;  // null = all default
+    const autoRefresh = item.cfg.autoRefresh !== false;
+    const marquee = item.cfg.marquee === true;  // off by default
+    return `
+      ${bgField}
+      ${fsField}
+      <div class="field">
+        <label>類別（可揀多個）</label>
+        <div class="row" id="f-cats">
+          ${Object.entries(CAT_LABEL).filter(([k]) => DEFAULT_SOURCES[k] || FAKE_SOURCES[k]).map(([k,l])=>`
+            <span class="chip ${cats.includes(k)?'on':''}" data-v="${k}">${l}</span>
+          `).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label>語言</label>
+        <div class="seg" id="f-lang">
+          <button data-v="all" class="${lang==='all'?'on':''}">全部</button>
+          <button data-v="zh"  class="${lang==='zh' ?'on':''}">繁中</button>
+          <button data-v="en"  class="${lang==='en' ?'on':''}">英文</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>來源（不揀 = 用全部 default）</label>
+        <div class="row" id="f-sources">
+          ${Object.entries(SOURCES).map(([id, s])=>{
+            const on = enabled == null ? true : enabled.includes(id);
+            return `<span class="chip source-chip ${on?'on':''}" data-v="${id}" data-cat="${s.cat}" data-lang="${s.lang}" style="--chip-color:${s.color}">
+              <span class="dot" style="background:${s.color}"></span>${s.label}
+              <span class="badge">${CAT_LABEL[s.cat]||''}</span>
+            </span>`;
+          }).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label>自動刷新（每 5 分鐘）</label>
+        <div class="seg" id="f-autoRefresh">
+          <button data-v="true"  class="${autoRefresh?'on':''}">開</button>
+          <button data-v="false" class="${!autoRefresh?'on':''}">關</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>滾動列表（整個 list 自動逐漸 scroll）</label>
+        <div class="seg" id="f-marquee">
+          <button data-v="true"  class="${marquee?'on':''}">開</button>
+          <button data-v="false" class="${!marquee?'on':''}">關</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>滾動速度（slow 120s / normal 60s / fast 30s）</label>
+        <div class="seg" id="f-marqueeSpeed">
+          <button data-v="slow"   class="${(item.cfg.marqueeSpeed||'normal')==='slow'  ?'on':''}">慢</button>
+          <button data-v="normal" class="${(item.cfg.marqueeSpeed||'normal')==='normal'?'on':''}">正常</button>
+          <button data-v="fast"   class="${(item.cfg.marqueeSpeed||'normal')==='fast'  ?'on':''}">快</button>
+        </div>
+      </div>
+    `;
+  }
+  if (item.type === "note") {
+    return `
+      ${bgField}
+      ${fsField}
+      <div class="field">
+        <label>字體大細</label>
+        <div class="seg" id="f-size">
+          <button data-v="sm" class="${item.cfg.size==='sm'?'on':''}">細</button>
+          <button data-v="md" class="${(!item.cfg.size||item.cfg.size==='md')?'on':''}">中</button>
+          <button data-v="lg" class="${item.cfg.size==='lg'?'on':''}">大</button>
+        </div>
+      </div>
+    `;
+  }
+  return "";
+}
+
+function bindSettingsForm(item) {
+  // weather: select change
+  const placeSel = document.getElementById("f-place");
+  if (placeSel) placeSel.addEventListener("change", () => {
+    item.cfg.place = placeSel.value;
+    saveState();
+    // update title live
+    const el = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"] .title`);
+    if (el) el.textContent = widgetTitle(item);
+    // re-mount weather to load new place
+    const itemEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+    if (itemEl) {
+      const body = itemEl.querySelector(".body");
+      if (body) {
+        body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
+        const fakeEl = document.createElement('div');
+        fillWidgetBody(item, body, fakeEl, itemEl);
+        fakeEl.remove();
+      }
+    }
+  });
+  // segmented (boolean / enum)
+  settingsBody.querySelectorAll(".seg").forEach(seg => {
+    seg.addEventListener("click", e => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const valRaw = btn.dataset.v;
+      const val = valRaw === "true" ? true : valRaw === "false" ? false : valRaw;
+      const id = seg.id;
+      // visual
+      seg.querySelectorAll("button").forEach(b => b.classList.remove("on"));
+      btn.classList.add("on");
+      // save
+      if (id === "f-showWarn") item.cfg.showWarn = val;
+      if (id === "f-style")     item.cfg.style = val;
+      if (id === "f-hour24")    item.cfg.hour24 = val;
+      if (id === "f-showLunar") item.cfg.showLunar = val;
+      if (id === "f-size")      item.cfg.size = val;
+      if (id === "f-lang")      item.cfg.lang = val;
+      if (id === "f-autoRefresh") item.cfg.autoRefresh = val;
+      if (id === "f-marquee")   item.cfg.marquee = val;
+      if (id === "f-marqueeSpeed") item.cfg.marqueeSpeed = val;
+      saveState();
+      // remount so visual updates immediately
+      mountPage();
+    });
+  });
+  // multi-select chips
+  const catsBox = document.getElementById("f-cats");
+  if (catsBox) {
+    catsBox.addEventListener("click", e => {
+      const c = e.target.closest(".chip");
+      if (!c) return;
+      const v = c.dataset.v;
+      let cats = (item.cfg.cats || []).slice();
+      if (cats.includes(v)) cats = cats.filter(x => x !== v);
+      else cats.push(v);
+      item.cfg.cats = cats;
+      c.classList.toggle("on");
+      saveState();
+      mountPage();
+    });
+  }
+  // news source chips: state is "all on" (default) or explicit enabled[].
+  // To keep UX simple, "all on" = item.cfg.enabledSources === null.
+  // Clicking a chip toggles it. If after toggle it's a no-op (all on or all off in cat), we set null.
+  const bgBox = document.getElementById("f-bg");
+  if (bgBox) {
+    bgBox.addEventListener("click", e => {
+      const s = e.target.closest(".swatch");
+      if (!s) return;
+      const v = s.dataset.v || "";
+      item.bg = v || undefined;
+      // visual toggle
+      bgBox.querySelectorAll(".swatch").forEach(x => x.classList.remove("on"));
+      s.classList.add("on");
+      // apply live to the item element
+      const itemEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+      if (itemEl) {
+        if (v) itemEl.dataset.bg = v;
+        else delete itemEl.dataset.bg;
+      }
+      saveState();
+    });
+  }
+
+  // Font size slider + tick clicks
+  const fsSlider = document.getElementById("f-fs");
+  const fsValue  = settingsBody.querySelector(".fs-value");
+  const fsTicks  = settingsBody.querySelectorAll(".fs-tick");
+  function applyFs(v) {
+    item.fs = v;
+    if (fsValue) fsValue.textContent = v.toFixed(2) + "×";
+    fsTicks.forEach(t => t.classList.toggle("on", Math.abs(parseFloat(t.dataset.fs) - v) < 0.01));
+    const itemEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+    if (itemEl) itemEl.dataset.fs = String(v);
+  }
+  if (fsSlider) {
+    fsSlider.addEventListener("input", () => {
+      const v = parseFloat(fsSlider.value);
+      applyFs(v);
+      saveState();
+    });
+  }
+  if (fsTicks.length) {
+    fsTicks.forEach(t => {
+      t.addEventListener("click", () => {
+        const v = parseFloat(t.dataset.fs);
+        if (fsSlider) fsSlider.value = String(v);
+        applyFs(v);
+        saveState();
+      });
+    });
+  }
+
+  const sourcesBox = document.getElementById("f-sources");
+  if (sourcesBox) {
+    sourcesBox.addEventListener("click", e => {
+      const c = e.target.closest(".chip");
+      if (!c) return;
+      const id = c.dataset.v;
+      // determine current effective set
+      const allIds = Object.keys(SOURCES);
+      const currentlyOn = (item.cfg.enabledSources === undefined || item.cfg.enabledSources === null)
+        ? new Set(allIds)
+        : new Set(item.cfg.enabledSources);
+      if (currentlyOn.has(id)) currentlyOn.delete(id);
+      else currentlyOn.add(id);
+      // if all on, set null; if all off, leave empty (will result in 0 news)
+      if (currentlyOn.size === allIds.length) {
+        item.cfg.enabledSources = null;
+      } else {
+        item.cfg.enabledSources = [...currentlyOn];
+      }
+      c.classList.toggle("on");
+      saveState();
+      mountPage();
+    });
+  }
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ============================================================
+   Gridlines — match GridStack's exact cellWidth/cellHeight
+   ============================================================ */
+function drawGridlines() {
+  if (!grid) return;
+  const eng = grid.engine;
+  if (!eng) return;
+  const cols = eng.column || 12;
+  const widgetEl = Array.from(gridEl.querySelectorAll('.grid-stack-item'))
+    .find(it => !it.classList.contains('grid-stack-placeholder'));
+  let colStep;
+  if (widgetEl) {
+    // Measure column step from an actual rendered widget: width / gs-w
+    const wAttr = +widgetEl.getAttribute('gs-w') || 1;
+    const wPx = widgetEl.getBoundingClientRect().width;
+    colStep = wPx / wAttr;
+  } else {
+    colStep = gridEl.getBoundingClientRect().width / cols;
+  }
+  drawWith(colStep, cols);
+}
+
+function drawWith(colStep, cols) {
+  // Remove old lines
+  gridEl.querySelectorAll('.gs-line').forEach(el => el.remove());
+  // Draw vertical lines at left edge of every column (= c * colStep)
+  for (let c = 0; c <= cols; c++) {
+    const x = c * colStep;
+    const line = document.createElement('div');
+    line.className = 'gs-line v';
+    line.style.left = x + 'px';
+    gridEl.appendChild(line);
+  }
+  // Row lines — based on content extent; cellH is rendered as gs-h * (cellH+margin)
+  // We can derive cellH+margin from any widget height / its gs-h
+  let rowStep = 60; // default
+  const sample = gridEl.querySelector('.grid-stack-item:not(.grid-stack-placeholder)');
+  if (sample) {
+    const hAttr = +sample.getAttribute('gs-h') || 1;
+    const hPx = sample.getBoundingClientRect().height;
+    rowStep = hPx / hAttr;
+  }
+  let maxRows = 12;
+  grid.engine.nodes.forEach(n => { if (n.y + n.h > maxRows) maxRows = n.y + n.h; });
+  for (let r = 1; r < maxRows + 4; r++) {
+    const y = r * rowStep;
+    const line = document.createElement('div');
+    line.className = 'gs-line h';
+    line.style.top = y + 'px';
+    gridEl.appendChild(line);
+  }
+  const minH = (maxRows + 2) * rowStep;
+  gridEl.style.minHeight = minH + 'px';
+}
+
+/* ============================================================
+   Auto-arrange (compact)
+   ============================================================ */
+document.getElementById("arrangeBtn").addEventListener("click", () => {
+  if (!grid) return;
+  // save current sizes back into state first
+  grid.engine.nodes.forEach(n => {
+    const it = currentPage().items.find(x => x.id === n.id);
+    if (it) { it.x = n.x; it.y = n.y; it.w = n.w; it.h = n.h; }
+  });
+  // pack items by w desc, place greedily
+  const items = currentPage().items.slice().sort((a,b) => (b.w*b.h) - (a.w*a.h));
+  const placed = []; // {id, x, y, w, h}
+  function fits(x, y, w, h) {
+    if (x + w > COLS) return false;
+    for (const p of placed) {
+      if (x < p.x + p.w && x + w > p.x && y < p.y + p.h && y + h > p.y) return false;
+    }
+    return true;
+  }
+  items.forEach(it => {
+    let found = false;
+    for (let y = 0; y < 200 && !found; y++) {
+      for (let x = 0; x + it.w <= COLS && !found; x++) {
+        if (fits(x, y, it.w, it.h)) {
+          placed.push({ id: it.id, x, y, w: it.w, h: it.h });
+          it.x = x; it.y = y;
+          found = true;
+        }
+      }
+    }
+  });
+  saveState();
+  mountPage();
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+function applyAppearance() {
+  document.body.classList.toggle("light", state.mode === "light");
+  // theme: remove all theme-* then add the active one
+  ["emerald","rose","amber","cyan","slate"].forEach(t => document.body.classList.remove("theme-" + t));
+  if (state.theme) document.body.classList.add("theme-" + state.theme);
+  // font family
+  document.body.classList.remove("font-serif","font-mono");
+  if (state.font === "serif") document.body.classList.add("font-serif");
+  if (state.font === "mono")  document.body.classList.add("font-mono");
+  // font size
+  document.body.classList.remove("fs-compact","fs-spacious","fs-roomy");
+  if (state.fontSize === "compact")  document.body.classList.add("fs-compact");
+  if (state.fontSize === "spacious") document.body.classList.add("fs-spacious");
+  if (state.fontSize === "roomy")    document.body.classList.add("fs-roomy");
+  // mode button label
+  const modeBtn = document.getElementById("modeBtn");
+  if (modeBtn) modeBtn.textContent = state.mode === "light" ? "☀️" : "🌙";
+}
+applyAppearance();
+
+// Mode toggle (dark / light)
+document.getElementById("modeBtn").addEventListener("click", () => {
+  state.mode = state.mode === "light" ? "dark" : "light";
+  saveState(); applyAppearance();
+});
+
+// Theme picker
+document.querySelectorAll('#themeMenu .menu-item').forEach(item => {
+  item.addEventListener("click", e => {
+    e.stopPropagation();
+    state.theme = item.dataset.theme || "";
+    saveState(); applyAppearance();
+    document.getElementById("themeMenu").classList.remove("open");
+  });
+});
+document.getElementById("themeBtn").addEventListener("click", e => {
+  e.stopPropagation();
+  document.getElementById("fontMenu").classList.remove("open");
+  document.getElementById("fsMenu").classList.remove("open");
+  document.getElementById("pageMenu").classList.remove("open");
+  document.getElementById("themeMenu").classList.toggle("open");
+});
+
+// Font family picker
+document.querySelectorAll('#fontMenu .menu-item').forEach(item => {
+  item.addEventListener("click", e => {
+    e.stopPropagation();
+    state.font = item.dataset.font || "";
+    saveState(); applyAppearance();
+    document.getElementById("fontMenu").classList.remove("open");
+  });
+});
+document.getElementById("fontBtn").addEventListener("click", e => {
+  e.stopPropagation();
+  document.getElementById("themeMenu").classList.remove("open");
+  document.getElementById("fsMenu").classList.remove("open");
+  document.getElementById("pageMenu").classList.remove("open");
+  document.getElementById("fontMenu").classList.toggle("open");
+});
+
+// Font size picker
+document.querySelectorAll('#fsMenu .menu-item').forEach(item => {
+  item.addEventListener("click", e => {
+    e.stopPropagation();
+    state.fontSize = item.dataset.fs || "";
+    saveState(); applyAppearance();
+    document.getElementById("fsMenu").classList.remove("open");
+  });
+});
+document.getElementById("fsBtn").addEventListener("click", e => {
+  e.stopPropagation();
+  document.getElementById("themeMenu").classList.remove("open");
+  document.getElementById("fontMenu").classList.remove("open");
+  document.getElementById("pageMenu").classList.remove("open");
+  document.getElementById("fsMenu").classList.toggle("open");
+});
+
+renderTabs();
+mountPage();
+
+/* ============================================================
+   Responsive sizing via ResizeObserver
+   Sets data-size on each widget item so CSS can switch layouts.
+   ============================================================ */
+const WIDGET_SIZE_BREAKS = {
+  clock:  { tiny: 160, narrow: 260, wide: 500 },
+  weather:{ tiny: 180, narrow: 320, wide: 560, xlarge: 800 },
+  news:   { tiny: 200, narrow: 340, wide: 700, xlarge: 900 },   // wide = 2-col, xlarge = 3-col
+  note:   { tiny: 160, narrow: 320, wide: 600 },
+};
+function applyWidgetSize(itemEl) {
+  if (!itemEl || !itemEl.classList) return;
+  const w = itemEl.getBoundingClientRect().width;
+  let type = null;
+  for (const c of itemEl.classList) {
+    if (c.startsWith("w-") && c !== "w-news" && c !== "w-note" && c !== "w-clock" && c !== "w-weather") continue;
+  }
+  if (itemEl.classList.contains("w-clock"))    type = "clock";
+  if (itemEl.classList.contains("w-weather"))  type = "weather";
+  if (itemEl.classList.contains("w-news"))     type = "news";
+  if (itemEl.classList.contains("w-note"))     type = "note";
+  if (!type) return;
+  const br = WIDGET_SIZE_BREAKS[type];
+  let size;
+  if (w < br.tiny) size = "tiny";
+  else if (w < br.narrow) size = "narrow";
+  else if (w < br.wide) size = "normal";
+  else if (w < (br.xlarge || 99999)) size = "wide";
+  else size = "xlarge";
+  itemEl.dataset.size = size;
+}
+const widgetRO = new ResizeObserver(entries => {
+  for (const e of entries) {
+    applyWidgetSize(e.target);
+    // Force tiny/narrow widget to fit content height (no scrollbar).
+    // GridStack float mode can leave widgets taller than necessary.
+    const item = e.target;
+    const w = item.getBoundingClientRect().width;
+    if (w < 200 && item.dataset.size === "tiny") {
+      const bodyH = item.querySelector(".widget .body")?.scrollHeight || 0;
+      const naturalH = bodyH + 8; // padding + border
+      const curH = item.offsetHeight;
+      if (curH > naturalH + 4) {
+        item.style.minHeight = naturalH + "px";
+      } else {
+        item.style.minHeight = "";
+      }
+    } else {
+      item.style.minHeight = "";
+    }
+  }
+});
+// Observe all current + future widget items via MutationObserver
+function watchWidgets() {
+  document.querySelectorAll(".grid-stack-item").forEach(el => {
+    if (!el.dataset.sizeObserved) {
+      widgetRO.observe(el);
+      el.dataset.sizeObserved = "1";
+      applyWidgetSize(el);
+    }
+  });
+}
+const gridObserver = new MutationObserver(() => {
+  document.querySelectorAll(".grid-stack-item").forEach(el => {
+    if (!el.dataset.sizeObserved) {
+      widgetRO.observe(el);
+      el.dataset.sizeObserved = "1";
+      applyWidgetSize(el);
+    }
+  });
+});
+gridObserver.observe(gridEl, { childList: true, subtree: false });
+watchWidgets();
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Debug artifacts (kept locally under .archive/, NOT in repo)
+.archive/
+shot-*.png
+inspect-*.js
+test-*.js
+quick.js
+shot-public.js
+shot.js
+
+# Erlang/Elixir (in case anything sneaks in)
+.rebar3/
+_*/
+*.beam
