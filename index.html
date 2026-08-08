@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Dashboard Prototype</title>
 
-<!-- GridStack core CSS + JS (CDN) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@11.1.2/dist/gridstack.min.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@11.1.2/dist/gridstack-extra.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/gridstack@11.1.2/dist/gridstack-all.js"></script>
+<!-- GridStack core CSS + JS (vendored for reliability) -->
+<link rel="stylesheet" href="vendor/gridstack.min.css" />
+<link rel="stylesheet" href="vendor/gridstack-extra.min.css" />
+<script src="vendor/gridstack-all.js"></script>
 
 <style>
   /* ============================================================
@@ -1707,6 +1707,11 @@ function mountWeather(item, body, itemEl) {
       </div>
       <div class="updated">更新於 ${new Date(rhr.updateTime).toLocaleTimeString("zh-HK", {hour:"2-digit", minute:"2-digit"})}</div>
     `;
+    }
+    catch (e) {
+      console.error("weather load failed:", e);
+      if (body.isConnected) renderError("天氣 widget 載入失敗");
+    }
   }
   // Robust defer: poll for body connection every 32ms up to 5s, then load.
   // mountItem calls renderWidget BEFORE appending to gridEl, so body.isConnected
