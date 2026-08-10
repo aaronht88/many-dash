@@ -1037,6 +1037,38 @@
   }
 
   /* ============================================================
+     Per-widget compact / hidden actions
+     ============================================================ */
+  .grid-stack-item.compact .widget > .body { padding: 6px 8px !important; gap: 4px !important; }
+  .grid-stack-item.compact .widget > .body > * { margin: 0 !important; }
+  .grid-stack-item.actions-hidden .w-actions { display: none !important; }
+
+  /* ============================================================
+     Forecast stack layout (vertical)
+     ============================================================ */
+  .fstack { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+  .fstack .fday { display: grid; grid-template-columns: 24px 28px 1fr auto; gap: 6px; align-items: center; font-size: calc(12px * var(--fs-scale)); padding: 2px 4px; border-radius: 4px; }
+  .fstack .fday:nth-child(odd) { background: var(--panel-2); }
+  .fstack .fday-w { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .fstack .fday-i { display: flex; align-items: center; }
+  .fstack .fday-t { color: var(--text); }
+  .fstack .fday-wv { color: var(--accent-2); font-size: calc(11px * var(--fs-scale)); }
+
+  /* Comfort line (compact meta replacement at tiny/narrow) */
+  .comfort { font-size: calc(12px * var(--fs-scale)); color: var(--text-2); margin-top: 2px; }
+
+  /* ============================================================
+     Settings: danger chips + priority list
+     ============================================================ */
+  .chip.danger { border-color: rgba(248, 113, 113, 0.4); color: var(--bad); }
+  .chip.danger.on { background: rgba(248, 113, 113, 0.18); border-color: var(--bad); }
+  .priority-list { display: flex; flex-direction: column; gap: 4px; padding: 6px; background: var(--panel-2); border-radius: var(--r-md); max-height: 240px; overflow-y: auto; }
+  .priority-list .chip { justify-content: flex-start; cursor: grab; }
+  .priority-list .chip:active { cursor: grabbing; }
+  .priority-list .chip .drag-handle { color: var(--muted-2); margin-right: 6px; font-weight: bold; }
+  .hint { font-size: calc(11px * var(--fs-scale)); color: var(--muted-2); margin-top: 4px; }
+
+  /* ============================================================
      Empty state
      ============================================================ */
   .empty {
@@ -1345,6 +1377,8 @@ function mountItem(it, autoPos = false) {
   el.dataset.id = it.id;
   if (it.bg) el.dataset.bg = it.bg;  // per-widget background color theme
   if (it.fs) el.dataset.fs = String(it.fs);  // per-widget font-size scale
+  if (it.hidden === true) el.classList.add("actions-hidden");
+  if (it.compact === true) el.classList.add("compact");
   const content = document.createElement("div");
   content.className = "grid-stack-item-content";
   const widgetEl = renderWidget(it, el);
@@ -1618,6 +1652,23 @@ async function fetchHKO(dataType = "rhrread", lang = "tc") {
   finally { clearTimeout(t); }
 }
 
+// 風速 + 濕度合併一句 "comfort" line（細 widget 用）
+function comfortLine(rhr, place) {
+  const humid = (findPlaceValue(rhr.humidity, place) || rhr.humidity.data[0]).value;
+  const temp  = (findPlaceValue(rhr.temperature, place) || rhr.temperature.data[0]).value;
+  let s = "";
+  if (humid >= 85) s += "濕焗";
+  else if (humid >= 70) s += "有啲翳焗";
+  else if (humid >= 50) s += "清爽";
+  else s += "乾爽";
+  if (temp >= 30) s += " · 熱";
+  else if (temp >= 27) s += " · 暖";
+  else if (temp >= 22) s += " · 舒適";
+  else if (temp >= 18) s += " · 涼";
+  else s += " · 凍";
+  return s;
+}
+
 function findPlaceValue(data, place) {
   if (!data) return null;
   const list = Array.isArray(data) ? data : (data.data || []);
@@ -1637,6 +1688,9 @@ function mountWeather(item, body, itemEl) {
 
   const place = item.cfg.place || "京士柏";
   const showWarn = item.cfg.showWarn !== false;
+  const forecastLayout = item.cfg.forecastLayout || "strip";  // strip | stack | hidden
+  // Reflect layout on itemEl so CSS / debugging can read it
+  itemEl.dataset.forecastLayout = forecastLayout;
 
   function renderError(msg) {
     body.innerHTML = `<div style="color:var(--muted);padding:8px;">⚠ ${msg}</div>`;
@@ -1675,13 +1729,52 @@ function mountWeather(item, body, itemEl) {
         const def = HKO_ICON[code] || { e: "🌡️", svg: "" };
         const min = parseInt(d.forecastMintemp.value, 10);
         const max = parseInt(d.forecastMaxtemp.value, 10);
-        return { day: wkMap[d.week] || "?", e: def.e, svg: def.svg, t: def.t, max, min, code };
+        // 海浪 (sea state) icon: HKO fnd includes forecastWind + forecastWeatherDesc,
+        // we infer 浪 from 風速（海面狀態通常跟大風掛勾）。
+        const windDesc = (d.forecastWind || "") + (d.forecastWeatherDesc || "");
+        let wave = "平"; let waveIcon = "🌊";
+        if (/大風|烈風|暴風|強風|颱風|9級|10級|11級/.test(windDesc)) { wave = "巨浪"; waveIcon = "🌊🌊"; }
+        else if (/清勁|清風|疾勁|強風|6級|7級|8級/.test(windDesc)) { wave = "大浪"; waveIcon = "🌊"; }
+        else if (/微風|和緩|清風|3級|4級|5級/.test(windDesc)) { wave = "中浪"; waveIcon = "〰️"; }
+        else { wave = "小浪"; waveIcon = "≈"; }
+        return { day: wkMap[d.week] || "?", e: def.e, svg: def.svg, t: def.t, max, min, code, wave, waveIcon };
       });
     }
     if (days.length === 0) {
       // fallback: render placeholder
-      days = Array.from({length: 7}, (_, i) => ({ day: ["一","二","三","四","五","六","日"][i], e: "🌡️", max: "--", min: "--", code: 0 }));
+      days = Array.from({length: 7}, (_, i) => ({ day: ["一","二","三","四","五","六","日"][i], e: "🌡️", max: "--", min: "--", code: 0, wave: "平", waveIcon: "🌊" }));
     }
+
+    // Forecast rendering based on user-selected layout
+    const forecastHtml = forecastLayout === "hidden" ? "" : (
+      forecastLayout === "stack" ? `
+        <div class="fstack">
+          ${days.map(d => `
+            <div class="fday" title="${escapeHtml(d.t)}">
+              <span class="fday-w">${d.day}</span>
+              <span class="fday-i">${d.svg}</span>
+              <span class="fday-t"><b>${d.max}°</b> / ${d.min}°</span>
+              <span class="fday-wv" title="海況：${d.wave}">${d.waveIcon}</span>
+            </div>
+          `).join("")}
+        </div>
+      ` : `
+        <div class="strip">
+          ${days.map(d => `
+            <div class="day" title="${escapeHtml(d.t)} · 海況：${d.wave}">
+              <span>${d.day}</span>
+              <div class="d-icon">${d.svg}</div>
+              <b>${d.max}°</b>
+              <div class="bar" style="width:${30 + (d.max - 25) * 5}%"></div>
+            </div>
+          `).join("")}
+        </div>
+      `
+    );
+
+    // 風速/濕度 collapsed into a single "comfort" sentence at tiny/narrow sizes
+    const size = itemEl.dataset.size || "normal";
+    const compactMeta = ["tiny","narrow"].includes(size);
 
     body.innerHTML = `
       <div class="wx-top">
@@ -1690,21 +1783,16 @@ function mountWeather(item, body, itemEl) {
       </div>
       <div class="cond">${escapeHtml(iconDef.t)} · ${escapeHtml(place)}</div>
       ${warn && showWarn ? `<div class="w-warn">${escapeHtml(warn)}</div>` : ""}
-      <div class="meta">
-        <span>體感 <b>${temp.value}°</b></span>
-        <span>濕度 <b>${humid.value}%</b></span>
-        ${uv ? `<span>UV <b>${uv.value} ${escapeHtml(uv.desc || '')}</b></span>` : ""}
-      </div>
-      <div class="strip">
-        ${days.map(d => `
-          <div class="day" title="${escapeHtml(d.t)}">
-            <span>${d.day}</span>
-            <div class="d-icon">${d.svg}</div>
-            <b>${d.max}°</b>
-            <div class="bar" style="width:${30 + (d.max - 25) * 5}%"></div>
-          </div>
-        `).join("")}
-      </div>
+      ${compactMeta ? `
+        <div class="comfort">${comfortLine(rhr, place)}</div>
+      ` : `
+        <div class="meta">
+          <span>體感 <b>${temp.value}°</b></span>
+          <span>濕度 <b>${humid.value}%</b></span>
+          ${uv ? `<span>UV <b>${uv.value} ${escapeHtml(uv.desc || '')}</b></span>` : ""}
+        </div>
+      `}
+      ${forecastHtml}
       <div class="updated">更新於 ${new Date(rhr.updateTime).toLocaleTimeString("zh-HK", {hour:"2-digit", minute:"2-digit"})}</div>
     `;
     }
@@ -1870,11 +1958,15 @@ function activeSourcesFor(cat, enabled) {
 
 async function loadNewsForCfg(cfg) {
   const cats = (cfg.cats && cfg.cats.length) ? cfg.cats : ["local","intl","tech"];
+  const excludedCats = cfg.excludedCats || [];
+  const activeCats = cats.filter(c => !excludedCats.includes(c));
   const lang = cfg.lang || "all";
   const enabled = cfg.enabledSources || null;
+  const sortBy = cfg.sortBy || "time";   // time | source | cat
+  const sourcePriority = cfg.sourcePriority || null;
   const all = [];
   const seen = new Set();
-  for (const c of cats) {
+  for (const c of activeCats) {
     const sources = activeSourcesFor(c, enabled).filter(s => lang === "all" || s.lang === lang);
     if (!sources.length) {
       // try fake fallback (also honor lang)
@@ -1923,6 +2015,27 @@ async function loadNewsForCfg(cfg) {
     for (const arr of sourceLists) {
       if (arr.length) { balanced.push(arr.shift()); added = true; }
     }
+  }
+  // Final sort based on user preference. "time" keeps round-robin (newest first inside each source).
+  // "source" / "cat" group by priority (sourcePriority overrides SOURCES insertion order).
+  if (sortBy === "source" || sortBy === "cat") {
+    const priorityOrder = sourcePriority && sourcePriority.length
+      ? sourcePriority
+      : Object.keys(SOURCES);
+    const orderMap = new Map(priorityOrder.map((id, i) => [id, i]));
+    balanced.sort((a, b) => {
+      if (sortBy === "cat") {
+        if (a.cat !== b.cat) return (a.cat || "").localeCompare(b.cat || "");
+      }
+      const oa = orderMap.has(a.srcId) ? orderMap.get(a.srcId) : 9999;
+      const ob = orderMap.has(b.srcId) ? orderMap.get(b.srcId) : 9999;
+      if (oa !== ob) return oa - ob;
+      // tiebreaker: keep time order
+      const ta = parseTs(a.ts), tb = parseTs(b.ts);
+      if (ta === Number.MAX_SAFE_INTEGER) return 1;
+      if (tb === Number.MAX_SAFE_INTEGER) return -1;
+      return ta - tb;
+    });
   }
   return balanced;
 }
@@ -2109,11 +2222,32 @@ function renderSettingsForm(item) {
       <div class="fs-ticks">${fsOptions.map(v => `<span class="fs-tick ${Math.abs(v-currentFs)<0.01?'on':''}" data-fs="${v}">${v===1?'1.0':v.toFixed(1)}</span>`).join("")}</div>
     </div>
   `;
+  // Common: hide floating action buttons (⚙/✕). User can right-click to reopen.
+  const hidden = item.hidden === true;
+  const compact = item.compact === true;
+  const commonFields = `
+    <div class="field">
+      <label>隱藏操作按鈕（⚙/✕）</label>
+      <div class="seg" id="f-hidden">
+        <button data-v="false" class="${!hidden?'on':''}">顯示</button>
+        <button data-v="true"  class="${hidden?'on':''}">隱藏</button>
+      </div>
+      <div class="hint">隱藏後可以右擊 widget 重開設定。</div>
+    </div>
+    <div class="field">
+      <label>精簡模式（內距縮 25%）</label>
+      <div class="seg" id="f-compact">
+        <button data-v="false" class="${!compact?'on':''}">標準</button>
+        <button data-v="true"  class="${compact?'on':''}">精簡</button>
+      </div>
+    </div>
+  `;
   if (item.type === "weather") {
     const place = item.cfg.place || "京士柏";
     return `
       ${bgField}
       ${fsField}
+      ${commonFields}
       <div class="field">
         <label>地點（HKO 監測站）</label>
         <select id="f-place">
@@ -2127,6 +2261,14 @@ function renderSettingsForm(item) {
           <button data-v="false" class="${item.cfg.showWarn === false ? "on":""}">隱藏</button>
         </div>
       </div>
+      <div class="field">
+        <label>7 日預報排列</label>
+        <div class="seg" id="f-forecastLayout">
+          <button data-v="strip"  class="${(item.cfg.forecastLayout||'strip')==='strip' ?'on':''}">橫向 strip</button>
+          <button data-v="stack"  class="${item.cfg.forecastLayout==='stack' ?'on':''}">垂直 list</button>
+          <button data-v="hidden" class="${item.cfg.forecastLayout==='hidden'?'on':''}">隱藏</button>
+        </div>
+      </div>
     `;
   }
   if (item.type === "clock") {
@@ -2134,6 +2276,7 @@ function renderSettingsForm(item) {
     return `
       ${bgField}
       ${fsField}
+      ${commonFields}
       <div class="field">
         <label>樣式</label>
         <div class="seg" id="f-style">
@@ -2160,19 +2303,38 @@ function renderSettingsForm(item) {
   }
   if (item.type === "news") {
     const cats = item.cfg.cats || [];
+    const excludedCats = item.cfg.excludedCats || [];
     const lang = item.cfg.lang || "all";
     const enabled = item.cfg.enabledSources;  // null = all default
     const autoRefresh = item.cfg.autoRefresh !== false;
     const marquee = item.cfg.marquee === true;  // off by default
+    const sortBy = item.cfg.sortBy || "time";   // time | source | cat
     return `
       ${bgField}
       ${fsField}
+      ${commonFields}
       <div class="field">
         <label>類別（可揀多個）</label>
         <div class="row" id="f-cats">
           ${Object.entries(CAT_LABEL).filter(([k]) => DEFAULT_SOURCES[k] || FAKE_SOURCES[k]).map(([k,l])=>`
             <span class="chip ${cats.includes(k)?'on':''}" data-v="${k}">${l}</span>
           `).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label>排除類別（黑名單 — 從結果過濾）</label>
+        <div class="row" id="f-excludedCats">
+          ${Object.entries(CAT_LABEL).filter(([k]) => DEFAULT_SOURCES[k] || FAKE_SOURCES[k]).map(([k,l])=>`
+            <span class="chip danger ${excludedCats.includes(k)?'on':''}" data-v="${k}">${l}</span>
+          `).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label>排序方式</label>
+        <div class="seg" id="f-sortBy">
+          <button data-v="time"   class="${sortBy==='time'  ?'on':''}">時間</button>
+          <button data-v="source" class="${sortBy==='source'?'on':''}">來源</button>
+          <button data-v="cat"    class="${sortBy==='cat'   ?'on':''}">類別</button>
         </div>
       </div>
       <div class="field">
@@ -2194,6 +2356,23 @@ function renderSettingsForm(item) {
             </span>`;
           }).join("")}
         </div>
+      </div>
+      <div class="field">
+        <label>來源 priority（drag 重排；左邊優先）</label>
+        <div class="priority-list" id="f-priority">
+          ${(() => {
+            const order = item.cfg.sourcePriority || Object.keys(SOURCES);
+            return order.map(id => {
+              const s = SOURCES[id];
+              if (!s) return '';
+              return `<span class="chip source-chip draggable" data-v="${id}" draggable="true" style="--chip-color:${s.color}">
+                <span class="drag-handle" title="拖曳重排">⋮⋮</span>
+                <span class="dot" style="background:${s.color}"></span>${s.label}
+              </span>`;
+            }).join("");
+          })()}
+        </div>
+        <div class="hint">改完要撳「儲存」先生效。</div>
       </div>
       <div class="field">
         <label>自動刷新（每 5 分鐘）</label>
@@ -2223,6 +2402,7 @@ function renderSettingsForm(item) {
     return `
       ${bgField}
       ${fsField}
+      ${commonFields}
       <div class="field">
         <label>字體大細</label>
         <div class="seg" id="f-size">
@@ -2278,11 +2458,79 @@ function bindSettingsForm(item) {
       if (id === "f-autoRefresh") item.cfg.autoRefresh = val;
       if (id === "f-marquee")   item.cfg.marquee = val;
       if (id === "f-marqueeSpeed") item.cfg.marqueeSpeed = val;
+      if (id === "f-forecastLayout") item.cfg.forecastLayout = val;
+      if (id === "f-sortBy")    item.cfg.sortBy = val;
+      if (id === "f-hidden") {
+        item.hidden = val;
+        const itemEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+        if (itemEl) {
+          if (val) itemEl.classList.add("actions-hidden");
+          else itemEl.classList.remove("actions-hidden");
+        }
+      }
+      if (id === "f-compact") {
+        item.compact = val;
+        const itemEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+        if (itemEl) {
+          if (val) itemEl.classList.add("compact");
+          else itemEl.classList.remove("compact");
+        }
+        saveState();
+        return;  // skip mountPage, no need to rebuild DOM
+      }
       saveState();
       // remount so visual updates immediately
       mountPage();
     });
   });
+  // Excluded cats (blacklist chips, danger style)
+  const excCatsBox = document.getElementById("f-excludedCats");
+  if (excCatsBox) {
+    excCatsBox.addEventListener("click", e => {
+      const c = e.target.closest(".chip");
+      if (!c) return;
+      const v = c.dataset.v;
+      let exc = (item.cfg.excludedCats || []).slice();
+      if (exc.includes(v)) exc = exc.filter(x => x !== v);
+      else exc.push(v);
+      item.cfg.excludedCats = exc;
+      c.classList.toggle("on");
+      saveState();
+      mountPage();
+    });
+  }
+  // Source priority drag-to-reorder
+  const priBox = document.getElementById("f-priority");
+  if (priBox) {
+    let dragId = null;
+    priBox.querySelectorAll(".chip.draggable").forEach(chip => {
+      chip.addEventListener("dragstart", e => {
+        dragId = chip.dataset.v;
+        e.dataTransfer.effectAllowed = "move";
+        chip.style.opacity = "0.4";
+      });
+      chip.addEventListener("dragend", () => { chip.style.opacity = ""; dragId = null; });
+      chip.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; });
+      chip.addEventListener("drop", e => {
+        e.preventDefault();
+        if (!dragId || dragId === chip.dataset.v) return;
+        const order = Array.from(priBox.querySelectorAll(".chip")).map(c => c.dataset.v);
+        const from = order.indexOf(dragId);
+        const to = order.indexOf(chip.dataset.v);
+        if (from < 0 || to < 0) return;
+        order.splice(to, 0, order.splice(from, 1)[0]);
+        // re-render
+        const frag = document.createDocumentFragment();
+        order.forEach(id => {
+          const c = priBox.querySelector(`.chip[data-v="${id}"]`);
+          if (c) frag.appendChild(c);
+        });
+        priBox.appendChild(frag);
+        item.cfg.sourcePriority = order;
+        saveState();
+      });
+    });
+  }
   // multi-select chips
   const catsBox = document.getElementById("f-cats");
   if (catsBox) {
