@@ -1693,23 +1693,38 @@ function mountWeather(item, body, itemEl) {
   itemEl.dataset.forecastLayout = forecastLayout;
 
   function renderError(msg) {
-    body.innerHTML = `<div style="color:var(--muted);padding:8px;">⚠ ${msg}</div>`;
+    body.innerHTML = `<div style="color:var(--muted);padding:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;">
+      <span>⚠ ${msg}</span>
+      <button class="tool" data-act="retry" style="font-size:11px;padding:3px 8px;">↻ 重試</button>
+    </div>`;
+    const retryBtn = body.querySelector('[data-act="retry"]');
+    if (retryBtn) retryBtn.addEventListener("click", (e) => { e.stopPropagation(); load(); });
   }
 
   async function load() {
     if (!body.isConnected) return;
     body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
-    // INLINE fetch with hard timeout — bypass fetchHKO helper.
+    // INLINE fetch with hard timeout + 2 retries — bypass fetchHKO helper.
     // The fetchHKO helper's AbortController logic has been observed to deadlock
     // in some browser contexts; this inline version always resolves.
-    const timeoutFetch = (url, ms) => Promise.race([
-      fetch(url, { mode: "cors", cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null),
-      new Promise(r => setTimeout(() => r(null), ms))
-    ]);
+    const timeoutFetch = async (url, ms, retries = 2) => {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        const result = await Promise.race([
+          fetch(url, { mode: "cors", cache: "no-store" })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
+          new Promise(r => setTimeout(() => r(null), ms)),
+        ]);
+        if (result !== null) return result;
+        // backoff: 500ms, 1500ms
+        if (attempt < retries) await new Promise(r => setTimeout(r, 500 + attempt * 1000));
+      }
+      return null;
+    };
     try {
       const [rhr, fnd] = await Promise.all([
-        timeoutFetch(`${PROXY_BASE}/api/hko?dataType=rhrread&lang=tc`, 6000),
-        timeoutFetch(`${PROXY_BASE}/api/hko?dataType=fnd&lang=tc`, 6000),
+        timeoutFetch(`${PROXY_BASE}/api/hko?dataType=rhrread&lang=tc`, 8000),
+        timeoutFetch(`${PROXY_BASE}/api/hko?dataType=fnd&lang=tc`, 8000),
       ]);
       if (!body.isConnected) return;
       if (!rhr) { renderError("HKO 連線失敗 — 請 reload"); return; }
