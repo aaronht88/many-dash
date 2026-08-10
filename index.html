@@ -1692,9 +1692,10 @@ function mountWeather(item, body, itemEl) {
   // Reflect layout on itemEl so CSS / debugging can read it
   itemEl.dataset.forecastLayout = forecastLayout;
 
-  function renderError(msg) {
+  function renderError(msg, detail) {
     body.innerHTML = `<div style="color:var(--muted);padding:8px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;">
       <span>⚠ ${msg}</span>
+      ${detail ? `<code style="font-size:10px;color:var(--muted-2);word-break:break-all;">${escapeHtml(detail)}</code>` : ""}
       <button class="tool" data-act="retry" style="font-size:11px;padding:3px 8px;">↻ 重試</button>
     </div>`;
     const retryBtn = body.querySelector('[data-act="retry"]');
@@ -1704,30 +1705,27 @@ function mountWeather(item, body, itemEl) {
   async function load() {
     if (!body.isConnected) return;
     body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
-    // INLINE fetch with hard timeout + 2 retries — bypass fetchHKO helper.
-    // The fetchHKO helper's AbortController logic has been observed to deadlock
-    // in some browser contexts; this inline version always resolves.
-    const timeoutFetch = async (url, ms, retries = 2) => {
-      for (let attempt = 0; attempt <= retries; attempt++) {
-        const result = await Promise.race([
-          fetch(url, { mode: "cors", cache: "no-store" })
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null),
-          new Promise(r => setTimeout(() => r(null), ms)),
-        ]);
-        if (result !== null) return result;
-        // backoff: 500ms, 1500ms
-        if (attempt < retries) await new Promise(r => setTimeout(r, 500 + attempt * 1000));
-      }
-      return null;
-    };
+    // DIAGNOSTIC: single raw fetch with full error reporting so we can see
+    // exactly what's wrong (CORS, network, HTTP status, JSON parse).
+    async function fetchOne(url) {
+      try {
+        const r = await fetch(url, { mode: "cors", cache: "no-store" });
+        if (!r.ok) return { err: `HTTP ${r.status}` };
+        const j = await r.json();
+        if (!j) return { err: "empty json" };
+        return { ok: j };
+      } catch (e) { return { err: String(e) }; }
+    }
     try {
-      const [rhr, fnd] = await Promise.all([
-        timeoutFetch(`${PROXY_BASE}/api/hko?dataType=rhrread&lang=tc`, 8000),
-        timeoutFetch(`${PROXY_BASE}/api/hko?dataType=fnd&lang=tc`, 8000),
+      const [rhrR, fndR] = await Promise.all([
+        fetchOne(`${PROXY_BASE}/api/hko?dataType=rhrread&lang=tc`),
+        fetchOne(`${PROXY_BASE}/api/hko?dataType=fnd&lang=tc`),
       ]);
       if (!body.isConnected) return;
-      if (!rhr) { renderError("HKO 連線失敗 — 請 reload"); return; }
+      if (rhrR.err) { renderError("HKO 連線失敗", `${PROXY_BASE}/api/hko?dataType=rhrread → ${rhrR.err}`); return; }
+      const rhr = rhrR.ok;
+      const fnd = fndR.ok || null;  // fnd optional
+      console.log("[weather] rhr ok:", !!rhr, "fnd ok:", !!fnd, "icon:", rhr.icon?.[0], "temp:", rhr.temperature?.data?.length);
     const temp   = findPlaceValue(rhr.temperature, place) || rhr.temperature.data[0];
     const humid  = findPlaceValue(rhr.humidity,    place) || rhr.humidity.data[0];
     const uv     = rhr.uvindex && rhr.uvindex.data && rhr.uvindex.data[0];
