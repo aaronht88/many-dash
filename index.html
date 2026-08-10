@@ -1811,7 +1811,7 @@ function mountWeather(item, body, itemEl) {
     }
     catch (e) {
       console.error("weather load failed:", e);
-      if (body.isConnected) renderError("天氣 widget 載入失敗");
+      if (body.isConnected) renderError("天氣 widget 載入失敗", String(e && e.message || e));
     }
   }
   // Robust defer: poll for body connection every 32ms up to 5s, then load.
