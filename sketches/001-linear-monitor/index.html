@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>many-dash · Linear Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;510;590;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Linear-style design tokens (Monitor surface)
+     ============================================================ */
+  :root {
+    /* Surfaces — luminance stepping, never solid dark colors */
+    --bg-0:     #08090a;   /* marketing / page canvas */
+    --bg-1:     #0f1011;   /* panel */
+    --bg-2:     #191a1b;   /* elevated */
+    --bg-3:     #28282c;   /* hover */
+    --bg-tint:  rgba(94, 106, 210, 0.04);  /* indigo wash */
+
+    /* Text — 4-tier hierarchy */
+    --text-1:   #f7f8f8;   /* primary */
+    --text-2:   #d0d6e0;   /* secondary */
+    --text-3:   #8a8f98;   /* muted */
+    --text-4:   #62666d;   /* subdued */
+
+    /* Brand — single accent, used sparingly */
+    --brand:    #5e6ad2;
+    --brand-2:  #7170ff;
+    --brand-3:  #828fff;
+
+    /* Borders — whisper-thin semi-transparent white */
+    --border-1: rgba(255, 255, 255, 0.05);
+    --border-2: rgba(255, 255, 255, 0.08);
+    --border-3: rgba(255, 255, 255, 0.12);
+
+    /* Status (kept minimal) */
+    --good:     #10b981;
+    --bad:      #f87171;
+    --warn:     #f59e0b;
+
+    /* Radius */
+    --r-2: 2px;
+    --r-4: 4px;
+    --r-6: 6px;
+    --r-8: 8px;
+    --r-12: 12px;
+    --r-pill: 9999px;
+
+    /* Spacing — 8px base */
+    --s-1: 4px;
+    --s-2: 8px;
+    --s-3: 12px;
+    --s-4: 16px;
+    --s-5: 20px;
+    --s-6: 24px;
+    --s-8: 32px;
+    --s-10: 40px;
+    --s-12: 48px;
+
+    /* Motion */
+    --t-fast: 120ms;
+    --t-med:  200ms;
+    --t-slow: 320ms;
+    --ease:   cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Shadow stacks — multi-layer on dark */
+    --shadow-1: rgba(0,0,0,0.03) 0px 1.2px 0px 0px;
+    --shadow-2: rgba(0,0,0,0.2) 0px 0px 0px 1px;
+    --shadow-3: rgba(0,0,0,0.4) 0px 2px 4px;
+    --shadow-4: rgba(0,0,0,0) 0px 8px 2px, rgba(0,0,0,0.01) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.07) 0px 1px 1px, rgba(0,0,0,0.08) 0px 0px 1px;
+  }
+
+  /* ============================================================
+     Base — Inter Variable globally with cv01 / ss03
+     ============================================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg-0); }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: 'cv01', 'ss03';
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-2);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  ::selection { background: var(--brand); color: #fff; }
+
+  /* ============================================================
+     Top bar — minimal sticky header
+     ============================================================ */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15, 16, 17, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-1);
+    padding: var(--s-3) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4);
+  }
+  .brand {
+    display: flex; align-items: center; gap: var(--s-2);
+    font-weight: 510;
+    font-size: 13px;
+    color: var(--text-1);
+    letter-spacing: -0.13px;
+  }
+  .brand-mark {
+    width: 18px; height: 18px;
+    background: linear-gradient(135deg, var(--brand-2), var(--brand-3));
+    border-radius: var(--r-4);
+    box-shadow: 0 0 12px rgba(113, 112, 255, 0.4);
+  }
+  .crumbs { display: flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 13px; font-weight: 400; }
+  .crumbs .sep { color: var(--text-4); }
+  .crumbs .here { color: var(--text-1); font-weight: 510; }
+  .topbar .spacer { flex: 1; }
+  .search {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-2);
+    border-radius: var(--r-6);
+    padding: 4px 10px;
+    color: var(--text-3);
+    font-size: 12px;
+    width: 200px;
+  }
+  .search kbd {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-1);
+    border-radius: var(--r-4);
+    padding: 1px 5px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--text-3);
+    margin-left: auto;
+  }
+  .icon-btn {
+    width: 28px; height: 28px;
+    border-radius: var(--r-6);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-3);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.04); color: var(--text-1); border-color: var(--border-1); }
+
+  /* ============================================================
+     Grid container — 12-col
+     ============================================================ */
+  .container { max-width: 1440px; margin: 0 auto; padding: var(--s-8) var(--s-6); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--s-3);
+  }
+
+  /* ============================================================
+     Widget card — surface (Level 2)
+     ============================================================ */
+  .widget {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-2);
+    border-radius: var(--r-8);
+    padding: var(--s-4) var(--s-5);
+    display: flex; flex-direction: column; gap: var(--s-3);
+    transition: border-color var(--t-fast) var(--ease);
+    min-height: 120px;
+    position: relative;
+  }
+  .widget:hover { border-color: var(--border-3); }
+
+  /* span helpers */
+  .col-3 { grid-column: span 3; }
+  .col-4 { grid-column: span 4; }
+  .col-5 { grid-column: span 5; }
+  .col-6 { grid-column: span 6; }
+  .col-7 { grid-column: span 7; }
+  .col-8 { grid-column: span 8; }
+  .col-9 { grid-column: span 9; }
+  .col-12 { grid-column: span 12; }
+
+  /* ============================================================
+     Widget chrome — Linear-style minimal header
+     ============================================================ */
+  .w-head {
+    display: flex; align-items: center; gap: var(--s-2);
+    padding-bottom: var(--s-2);
+  }
+  .w-icon {
+    width: 14px; height: 14px;
+    color: var(--text-3);
+    flex-shrink: 0;
+  }
+  .w-label {
+    font-size: 11px;
+    font-weight: 510;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .w-head .spacer { flex: 1; }
+  .w-status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px;
+    color: var(--text-4);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+  .dot.warn { background: var(--warn); }
+  .dot.live { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  /* ============================================================
+     Clock — signature 510 weight display
+     ============================================================ */
+  .clock-body {
+    display: flex; flex-direction: column; gap: 6px;
+    flex: 1; justify-content: center;
+  }
+  .clock-time {
+    font-size: 56px;
+    font-weight: 510;
+    color: var(--text-1);
+    letter-spacing: -1.232px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .clock-time .sec { color: var(--text-3); font-weight: 400; }
+  .clock-date {
+    font-size: 13px;
+    color: var(--text-3);
+    font-weight: 400;
+  }
+
+  /* ============================================================
+     Weather — single hero stat
+     ============================================================ */
+  .wx-body {
+    display: flex; align-items: flex-start; gap: var(--s-4);
+    flex: 1;
+  }
+  .wx-icon {
+    width: 56px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--brand-2);
+  }
+  .wx-icon svg { width: 100%; height: 100%; }
+  .wx-stat {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .wx-temp {
+    font-size: 44px;
+    font-weight: 510;
+    color: var(--text-1);
+    letter-spacing: -0.88px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .wx-cond {
+    font-size: 13px;
+    color: var(--text-2);
+    font-weight: 400;
+  }
+  .wx-cond .place { color: var(--text-3); }
+  .wx-meta {
+    display: flex; gap: var(--s-3);
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    margin-top: var(--s-2);
+  }
+  .wx-meta b { color: var(--text-2); font-weight: 500; }
+  .wx-warn {
+    font-size: 11px;
+    color: var(--warn);
+    padding: 4px 8px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: var(--r-4);
+    margin-top: var(--s-2);
+  }
+
+  /* 7-day forecast — minimal strip */
+  .forecast {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    padding-top: var(--s-3);
+    border-top: 1px solid var(--border-1);
+  }
+  .forecast-day {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-size: 11px;
+    color: var(--text-3);
+    padding: 4px 0;
+  }
+  .forecast-day .d-name { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; }
+  .forecast-day .d-icon { color: var(--brand-2); }
+  .forecast-day .d-max { color: var(--text-1); font-weight: 510; font-variant-numeric: tabular-nums; }
+  .forecast-day .d-min { color: var(--text-4); font-variant-numeric: tabular-nums; }
+  .forecast-day .d-wave { font-size: 9px; opacity: 0.6; }
+
+  /* ============================================================
+     News — dense list, single-line items with source weight
+     ============================================================ */
+  .news-body {
+    display: flex; flex-direction: column; gap: 2px;
+    flex: 1;
+    overflow: hidden;
+  }
+  .news-item {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    gap: var(--s-3);
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: var(--r-4);
+    font-size: 13px;
+    color: var(--text-2);
+    transition: background var(--t-fast) var(--ease);
+    cursor: pointer;
+  }
+  .news-item:hover { background: rgba(255,255,255,0.02); }
+  .news-src {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px;
+    color: var(--text-3);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+  .news-src::before {
+    content: '';
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--brand-2);
+  }
+  .news-src.local::before { background: #f59e0b; }
+  .news-src.intl::before { background: #2563eb; }
+  .news-src.tech::before { background: #9333ea; }
+  .news-title {
+    color: var(--text-2);
+    font-weight: 400;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .news-ts {
+    font-size: 10px;
+    color: var(--text-4);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ============================================================
+     Note — block of text, monospace accents
+     ============================================================ */
+  .note-body {
+    flex: 1;
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .note-body .tag { color: var(--brand-2); }
+
+  /* ============================================================
+     Stat grid — secondary KPI panel
+     ============================================================ */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-4);
+  }
+  .stat {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 510;
+  }
+  .stat-val {
+    font-size: 20px;
+    font-weight: 510;
+    color: var(--text-1);
+    letter-spacing: -0.24px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-delta {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    color: var(--good);
+  }
+  .stat-delta.bad { color: var(--bad); }
+
+  /* ============================================================
+     Tweaks panel (rendered as a widget, not floating overlay)
+     ============================================================ */
+  .tweaks {
+    background: transparent;
+    padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    font-size: 12px;
+  }
+  .tweaks h4 {
+    font-size: 11px;
+    font-weight: 510;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .tweaks .row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+  .tweaks label { color: var(--text-3); font-weight: 400; }
+  .seg {
+    display: inline-flex;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border-1);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .seg button {
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    font-size: 11px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .seg button.on { background: var(--brand); color: #fff; }
+
+  /* Footer-ish brand text */
+  .footnote {
+    margin-top: var(--s-6);
+    font-size: 11px;
+    color: var(--text-4);
+    text-align: center;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    many-dash
+  </div>
+  <div class="crumbs">
+    <span>Workspace</span>
+    <span class="sep">/</span>
+    <span>Home</span>
+    <span class="sep">/</span>
+    <span class="here">Dashboard</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="search">
+    <span>Search widgets…</span>
+    <kbd>⌘K</kbd>
+  </div>
+  <button class="icon-btn" title="Settings">⚙</button>
+  <button class="icon-btn" title="Theme">◐</button>
+  <button class="icon-btn" title="Add widget">+</button>
+</div>
+
+<!-- Grid -->
+<div class="container">
+  <div class="grid">
+
+    <!-- Clock (col-4) -->
+    <div class="widget col-4">
+      <div class="w-head">
+        <span class="w-icon">◷</span>
+        <span class="w-label">時鐘</span>
+        <div class="spacer"></div>
+        <span class="w-status"><span class="dot live"></span>live</span>
+      </div>
+      <div class="clock-body">
+        <div class="clock-time" id="clock">14<span style="color:var(--text-3);font-weight:400">:</span>21<span style="color:var(--text-3);font-weight:400">:</span>37</div>
+        <div class="clock-date">2026年8月10日 · 星期一 · 農曆 丙午年六月</div>
+      </div>
+    </div>
+
+    <!-- Weather (col-5) -->
+    <div class="widget col-5">
+      <div class="w-head">
+        <span class="w-icon">☀</span>
+        <span class="w-label">天氣 · HKO</span>
+        <div class="spacer"></div>
+        <span class="w-status"><span class="dot"></span>京士柏</span>
+      </div>
+      <div class="wx-body">
+        <div class="wx-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>
+        </div>
+        <div class="wx-stat">
+          <div class="wx-temp">34°</div>
+          <div class="wx-cond">酷熱 · <span class="place">京士柏</span></div>
+          <div class="wx-meta">
+            <span>體感 <b>36°</b></span>
+            <span>濕度 <b>51%</b></span>
+            <span>UV <b>0.6 低</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="wx-warn">⚠ 酷熱天氣警告現正生效，多補充水分及做足防暑措施</div>
+      <div class="forecast">
+        <div class="forecast-day"><span class="d-name">二</span><span class="d-icon">☀</span><b class="d-max">35°</b><span class="d-min">29°</span><span class="d-wave">≈</span></div>
+        <div class="forecast-day"><span class="d-name">三</span><span class="d-icon">⛅</span><b class="d-max">34°</b><span class="d-min">28°</span><span class="d-wave">≈</span></div>
+        <div class="forecast-day"><span class="d-name">四</span><span class="d-icon">⛅</span><b class="d-max">33°</b><span class="d-min">28°</span><span class="d-wave">≈</span></div>
+        <div class="forecast-day"><span class="d-name">五</span><span class="d-icon">🌦</span><b class="d-max">32°</b><span class="d-min">27°</span><span class="d-wave">〰️</span></div>
+        <div class="forecast-day"><span class="d-name">六</span><span class="d-icon">🌦</span><b class="d-max">32°</b><span class="d-min">27°</span><span class="d-wave">〰️</span></div>
+        <div class="forecast-day"><span class="d-name">日</span><span class="d-icon">⛅</span><b class="d-max">32°</b><span class="d-min">27°</span><span class="d-wave">≈</span></div>
+        <div class="forecast-day"><span class="d-name">一</span><span class="d-icon">⛅</span><b class="d-max">33°</b><span class="d-min">27°</span><span class="d-wave">≈</span></div>
+      </div>
+    </div>
+
+    <!-- Note (col-3) -->
+    <div class="widget col-3">
+      <div class="w-head">
+        <span class="w-icon">✎</span>
+        <span class="w-label">便條</span>
+        <div class="spacer"></div>
+        <span class="w-status"><span class="dot"></span>3 items</span>
+      </div>
+      <div class="note-body"><span class="tag">// TODO</span>
+
+• Send 8 月 budget report
+• Review HK weather widget
+  forecast layout (stack mode)
+• Many-dash design polish
+  v2 — Linear style</div>
+    </div>
+
+    <!-- News (col-9) -->
+    <div class="widget col-9">
+      <div class="w-head">
+        <span class="w-icon">▤</span>
+        <span class="w-label">新聞 · 18 sources</span>
+        <div class="spacer"></div>
+        <span class="w-status"><span class="dot live"></span>updated 12s ago</span>
+      </div>
+      <div class="news-body">
+        <div class="news-item">
+          <span class="news-src local">星島</span>
+          <span class="news-title">天文台：周三起連續四日有驟雨 酷熱天氣警告生效</span>
+          <span class="news-ts">2m</span>
+        </div>
+        <div class="news-item">
+          <span class="news-src intl">SCMP</span>
+          <span class="news-title">Beijing urged to win Indian hearts, Hong Kong's hottest day: 5 weekend reads you missed</span>
+          <span class="news-ts">8m</span>
+        </div>
+        <div class="news-item">
+          <span class="news-src tech">Verge</span>
+          <span class="news-title">Docker Sandboxes – Disposable, isolated sandboxes for AI agents</span>
+          <span class="news-ts">14m</span>
+        </div>
+        <div class="news-item">
+          <span class="news-src intl">BBC</span>
+          <span class="news-title">At least 13 killed in Ukrainian drone strike on Russia's Tatarstan region</span>
+          <span class="news-ts">22m</span>
+        </div>
+        <div class="news-item">
+          <span class="news-src tech">Ars</span>
+          <span class="news-title">DeepMind's hurricane breakthrough has surprised weather scientists</span>
+          <span class="news-ts">31m</span>
+        </div>
+        <div class="news-item">
+          <span class="news-src local">RFI</span>
+          <span class="news-title">台风"白海豚"持续影响中国东部 上海多地被淹 943 个航班取消</span>
+          <span class="news-ts">47m</span>
+        </div>
+        <div class="news-item">
+          <span class="news-src intl">NYT</span>
+          <span class="news-title">Ukrainian Drone Attack Kills 13 Deep Inside Russia</span>
+          <span class="news-ts">1h</span>
+        </div>
+        <div class="news-item">
+          <span class="news-src tech">HN</span>
+          <span class="news-title">Implant – an extension to VS Code that exposes its APIs to coding agents</span>
+          <span class="news-ts">1h</span>
+        </div>
+        <div class="news-item">
+          <span class="news-src tech">unwire</span>
+          <span class="news-title">AMD 收購 Taalas 蘇姿丰新賭局：把模型刻進晶片 推論速度快 B200 近 50 倍</span>
+          <span class="news-ts">2h</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI stats (col-3) -->
+    <div class="widget col-3" style="min-height: 220px;">
+      <div class="w-head">
+        <span class="w-icon">◆</span>
+        <span class="w-label">Activity</span>
+        <div class="spacer"></div>
+        <span class="w-status">24h</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat">
+          <span class="stat-label">Reads</span>
+          <span class="stat-val">847</span>
+          <span class="stat-delta">+12.4%</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Hits</span>
+          <span class="stat-val">312</span>
+          <span class="stat-delta">+5.1%</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Failed</span>
+          <span class="stat-val">7</span>
+          <span class="stat-delta bad">-2.0%</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footnote">001-linear-monitor · demo data · Inter cv01/ss03 · 12-col grid · 4 widget types</div>
+</div>
+
+<!-- Tweaks as a widget (col-3, second row right) -->
+<div class="widget col-3" style="min-height: 220px;">
+  <div class="w-head">
+    <span class="w-icon">⊕</span>
+    <span class="w-label">Tweaks</span>
+    <div class="spacer"></div>
+    <span class="w-status">design</span>
+  </div>
+  <div class="tweaks">
+    <div class="row">
+      <label>Density</label>
+      <div class="seg">
+        <button>Compact</button>
+        <button class="on">Default</button>
+        <button>Airy</button>
+      </div>
+    </div>
+    <div class="row">
+      <label>Number</label>
+      <div class="seg">
+        <button>Lining</button>
+        <button class="on">Tabular</button>
+      </div>
+    </div>
+    <div class="row">
+      <label>Forecast</label>
+      <div class="seg">
+        <button class="on">Strip</button>
+        <button>Stack</button>
+        <button>Hide</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Live clock
+  function tick() {
+    const n = new Date();
+    const p = x => String(x).padStart(2, "0");
+    const t = `${p(n.getHours())}<span style="color:var(--text-3);font-weight:400">:</span>${p(n.getMinutes())}<span style="color:var(--text-3);font-weight:400">:</span><span class="sec">${p(n.getSeconds())}</span>`;
+    const el = document.getElementById("clock");
+    if (el) el.innerHTML = t;
+  }
+  tick(); setInterval(tick, 1000);
+
+  // Tweak interactions
+  document.querySelectorAll(".seg").forEach(seg => {
+    seg.addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+      b.classList.add("on");
+    });
+  });
+</script>
+
+</body>
+</html>
