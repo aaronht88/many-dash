@@ -1731,7 +1731,9 @@ function mountWeather(item, body, itemEl) {
     const uv     = rhr.uvindex && rhr.uvindex.data && rhr.uvindex.data[0];
     const icon   = (rhr.icon && rhr.icon[0]) || 62;
     const iconDef = HKO_ICON[icon] || { e: "🌡️", t: "天氣" };
-    const warn   = (rhr.warningMessage || "").trim();
+    // warningMessage may be a string ("") or array of strings depending on HKO data freshness
+    const wmRaw = rhr.warningMessage;
+    const warn = (Array.isArray(wmRaw) ? wmRaw.join("") : (wmRaw || "")).trim();
 
     // 7-day forecast (best-effort)
     let days = [];
