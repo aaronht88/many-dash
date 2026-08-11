@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>many-dash · Sentry IDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Sentry-style design tokens (Data-dense IDE)
+     ============================================================ */
+  :root {
+    /* Surfaces — warm purple-black, never pure black */
+    --bg-0:     #150f23;   /* deepest — footer / hero ambient */
+    --bg-1:     #1f1633;   /* primary canvas */
+    --bg-2:     #281c40;   /* widget surface */
+    --bg-3:     #362d59;   /* elevated, hover */
+    --bg-glass: rgba(255, 255, 255, 0.06);
+
+    /* Text */
+    --text-1:   #ffffff;
+    --text-2:   #e5e7eb;
+    --text-3:   #a39ec0;   /* muted purple-gray */
+    --text-4:   #79628c;   /* subdued */
+
+    /* Accent — Sentry purple family (slightly shifted to avoid theme preset collision) */
+    --accent:    #7c6ad2;   /* links, active states */
+    --accent-2:  #9b8aff;   /* hover */
+    --accent-3:  #422082;   /* deep active */
+
+    /* Lime highlight — pop color, used once per section */
+    --lime:      #c2ef4e;
+    --lime-ink:  #1a3300;
+
+    /* Status */
+    --good:      #4ade80;
+    --warn:      #ffb287;
+    --bad:       #f87171;
+    --info:      #6ab9ff;
+
+    /* Category pill tints (transparent for tabular feel) */
+    --tint-local:  rgba(255, 178, 135, 0.15);
+    --tint-intl:   rgba(106, 185, 255, 0.15);
+    --tint-tech:   rgba(155, 138, 255, 0.15);
+
+    /* Border — purple-tinted, never gray */
+    --border-1: 1px solid rgba(54, 45, 89, 0.6);
+    --border-2: 1px solid rgba(54, 45, 89, 0.9);
+    --border-3: 1px solid rgba(155, 138, 255, 0.4);
+
+    /* Radius */
+    --r-4: 4px;
+    --r-6: 6px;
+    --r-8: 8px;
+    --r-10: 10px;
+    --r-12: 12px;
+    --r-13: 13px;
+    --r-pill: 9999px;
+
+    /* Spacing */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+    --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;
+
+    /* Shadows — Sentry signature */
+    --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+    --shadow-card:  0 10px 15px -3px rgba(0, 0, 0, 0.25);
+    --shadow-hover: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.4);
+    --shadow-glow:  0 4px 4px 9px rgba(22, 15, 36, 0.7);
+
+    /* Motion */
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --t-fast: 120ms;
+  }
+
+  /* ============================================================
+     Base — Rubik everywhere, JetBrains Mono for data
+     ============================================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg-1); }
+  body {
+    font-family: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-2);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent); color: var(--text-1); }
+
+  /* Mono shortcut */
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  /* ============================================================
+     Top bar — dense IDE-style
+     ============================================================ */
+  .topbar {
+    background: rgba(15, 12, 28, 0.85);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    border-bottom: var(--border-2);
+    padding: 10px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-1);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    border-radius: var(--r-6);
+    box-shadow: var(--shadow-glow);
+  }
+  .nav-sep { color: var(--text-4); font-size: 12px; margin: 0 4px; }
+  .nav {
+    display: flex; gap: 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    font-weight: 500;
+  }
+  .nav a {
+    color: var(--text-3);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: var(--r-6);
+    transition: all var(--t-fast) var(--ease);
+  }
+  .nav a:hover { color: var(--text-1); background: var(--bg-glass); }
+  .nav a.active { color: var(--text-1); background: var(--accent-3); }
+  .topbar .spacer { flex: 1; }
+  .search {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg-glass);
+    border: var(--border-2);
+    border-radius: var(--r-6);
+    padding: 4px 10px;
+    color: var(--text-3);
+    font-size: 12px;
+    width: 220px;
+  }
+  .search .mono {
+    margin-left: auto;
+    background: rgba(54, 45, 89, 0.6);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--text-3);
+  }
+  .btn-primary {
+    background: var(--bg-3);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-13);
+    box-shadow: var(--shadow-inset);
+    color: var(--text-1);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: box-shadow var(--t-fast) var(--ease);
+  }
+  .btn-primary:hover { box-shadow: var(--shadow-hover); }
+  .btn-glass {
+    background: var(--bg-glass);
+    backdrop-filter: blur(18px) saturate(180%);
+    border: var(--border-1);
+    border-radius: var(--r-12);
+    color: var(--text-1);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-glass:hover { background: rgba(54, 22, 107, 0.2); }
+
+  /* ============================================================
+     Container + Grid
+     ============================================================ */
+  .container { max-width: 1440px; margin: 0 auto; padding: 24px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px;
+  }
+  .col-2 { grid-column: span 2; }
+  .col-3 { grid-column: span 3; }
+  .col-4 { grid-column: span 4; }
+  .col-6 { grid-column: span 6; }
+  .col-8 { grid-column: span 8; }
+  .col-9 { grid-column: span 9; }
+  .col-12 { grid-column: span 12; }
+
+  /* ============================================================
+     Widget — IDE panel
+     ============================================================ */
+  .widget {
+    background: var(--bg-2);
+    border: var(--border-2);
+    border-radius: var(--r-10);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: border-color var(--t-fast) var(--ease);
+    min-height: 140px;
+  }
+  .widget:hover { border-color: var(--border-3); }
+
+  /* widget chrome — title bar like IDE tab */
+  .w-head {
+    background: var(--bg-3);
+    border-bottom: var(--border-1);
+    padding: 8px 12px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.25px;
+    font-weight: 600;
+    color: var(--text-3);
+  }
+  .w-head .dot-r { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); }
+  .w-head .dot-g { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 6px var(--lime); animation: pulse 1.8s ease-in-out infinite; }
+  .w-head .dot-w { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .w-head .label { color: var(--text-2); }
+  .w-head .badge {
+    margin-left: auto;
+    padding: 2px 6px;
+    border-radius: var(--r-4);
+    font-size: 9px;
+    letter-spacing: 0.25px;
+    background: var(--bg-glass);
+    color: var(--text-3);
+  }
+
+  .w-body {
+    padding: 16px;
+    flex: 1;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  /* ============================================================
+     KPI row (top, dense)
+     ============================================================ */
+  .kpi {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .kpi-label {
+    font-size: 10px;
+    color: var(--text-4);
+    text-transform: uppercase;
+    letter-spacing: 0.25px;
+    font-weight: 600;
+  }
+  .kpi-val {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-1);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+  }
+  .kpi-delta {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    color: var(--lime);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .kpi-delta.bad { color: var(--bad); }
+  .kpi-delta .arrow { font-weight: 700; }
+
+  /* ============================================================
+     Clock + Weather (col-6 hero row)
+     ============================================================ */
+  .wx-row {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center;
+  }
+  .wx-icon {
+    width: 56px; height: 56px;
+    background: var(--bg-3);
+    border-radius: 50%;
+    border: var(--border-3);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--warn);
+    font-size: 28px;
+  }
+  .wx-temp {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 40px;
+    font-weight: 600;
+    color: var(--text-1);
+    line-height: 1;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .wx-cond {
+    font-size: 12px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    font-weight: 500;
+    margin-top: 4px;
+  }
+  .wx-cond .place { color: var(--text-4); }
+  .wx-meta {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 8px;
+  }
+  .wx-meta b { color: var(--text-1); font-weight: 600; }
+  .wx-warn {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--warn);
+    background: rgba(255, 178, 135, 0.1);
+    border-left: 2px solid var(--warn);
+    padding: 6px 10px;
+    border-radius: 0 var(--r-4) var(--r-4) 0;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .clock-big {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 44px;
+    font-weight: 600;
+    color: var(--text-1);
+    line-height: 1;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .clock-big .sec { color: var(--accent-2); }
+  .clock-meta {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+
+  /* ============================================================
+     Forecast strip — IDE bar chart with numbers
+     ============================================================ */
+  .forecast {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 8px 0;
+  }
+  .forecast-day {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 8px 4px;
+    border-radius: var(--r-6);
+    background: var(--bg-glass);
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease);
+  }
+  .forecast-day:hover { background: var(--bg-3); }
+  .forecast-day.active { background: var(--accent-3); }
+  .forecast-day .d-name {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9px;
+    color: var(--text-4);
+    text-transform: uppercase;
+    letter-spacing: 0.25px;
+    font-weight: 600;
+  }
+  .forecast-day .d-icon { font-size: 16px; color: var(--accent-2); }
+  .forecast-day .d-num {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .forecast-day .d-min {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--text-4);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============================================================
+     News — IDE table
+     ============================================================ */
+  .news-table {
+    display: flex; flex-direction: column;
+    flex: 1;
+  }
+  .news-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 50px;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: var(--border-1);
+    font-size: 13px;
+    color: var(--text-2);
+    transition: background var(--t-fast) var(--ease);
+    cursor: pointer;
+  }
+  .news-row:hover { background: var(--bg-glass); }
+  .news-row:last-child { border-bottom: none; }
+  .news-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.25px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: var(--r-4);
+    text-align: center;
+  }
+  .news-tag.local { background: var(--tint-local); color: var(--warn); }
+  .news-tag.intl  { background: var(--tint-intl);  color: var(--info); }
+  .news-tag.tech  { background: var(--tint-tech);  color: var(--accent-2); }
+  .news-title {
+    color: var(--text-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .news-ts {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--text-4);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============================================================
+     Note — IDE log style
+     ============================================================ */
+  .note-body {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.7;
+    flex: 1;
+  }
+  .note-body .tag { color: var(--accent-2); font-weight: 600; }
+  .note-body .comment { color: var(--text-4); }
+  .note-body .check { color: var(--lime); }
+  .note-body ul { list-style: none; padding-left: 0; }
+  .note-body li::before {
+    content: '→ ';
+    color: var(--accent-2);
+    font-weight: 600;
+  }
+  .note-body li {
+    padding: 2px 0;
+  }
+
+  /* ============================================================
+     Tweaks — like console commands
+     ============================================================ */
+  .tweaks-list {
+    display: flex; flex-direction: column; gap: 10px;
+    flex: 1;
+  }
+  .tweaks-row {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+  }
+  .tweaks-cmd {
+    color: var(--accent-2);
+    width: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.25px;
+    font-weight: 600;
+    font-size: 10px;
+  }
+  .seg {
+    display: inline-flex;
+    background: var(--bg-1);
+    border: var(--border-1);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .seg button {
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .seg button.on {
+    background: var(--accent);
+    color: var(--text-1);
+    font-weight: 600;
+  }
+
+  /* ============================================================
+     Footer — system status bar
+     ============================================================ */
+  .statusbar {
+    background: var(--bg-0);
+    border-top: var(--border-2);
+    padding: 8px 24px;
+    display: flex; align-items: center; gap: 16px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.25px;
+  }
+  .statusbar .spacer { flex: 1; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-pill.ok .dot { background: var(--lime); box-shadow: 0 0 6px var(--lime); }
+  .status-pill.warn .dot { background: var(--warn); }
+  .status-pill.err .dot { background: var(--bad); }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    MANY-DASH
+  </div>
+  <span class="nav-sep">/</span>
+  <nav class="nav">
+    <a href="#" class="active">DASHBOARD</a>
+    <a href="#">ISSUES</a>
+    <a href="#">ACTIVITY</a>
+    <a href="#">SETTINGS</a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="search">
+    <span>⌕</span>
+    <span style="flex:1">Search feeds…</span>
+    <span class="mono">⌘K</span>
+  </div>
+  <button class="btn-glass">Theme</button>
+  <button class="btn-primary">+ New Widget</button>
+</div>
+
+<!-- Main -->
+<div class="container">
+
+  <!-- Row 1: KPIs (dense data row) -->
+  <div class="grid" style="margin-bottom: 12px;">
+    <div class="widget col-3">
+      <div class="w-head">
+        <span class="dot-g"></span>
+        <span class="label">READS · 24H</span>
+        <span class="badge mono">847</span>
+      </div>
+      <div class="w-body">
+        <div class="kpi">
+          <span class="kpi-val mono">847</span>
+          <span class="kpi-delta"><span class="arrow">↑</span> 12.4% vs yest</span>
+        </div>
+      </div>
+    </div>
+    <div class="widget col-3">
+      <div class="w-head">
+        <span class="dot-r"></span>
+        <span class="label">HITS</span>
+        <span class="badge mono">312</span>
+      </div>
+      <div class="w-body">
+        <div class="kpi">
+          <span class="kpi-val mono">312</span>
+          <span class="kpi-delta"><span class="arrow">↑</span> 5.1%</span>
+        </div>
+      </div>
+    </div>
+    <div class="widget col-3">
+      <div class="w-head">
+        <span class="dot-w"></span>
+        <span class="label">WARN</span>
+        <span class="badge mono">3</span>
+      </div>
+      <div class="w-body">
+        <div class="kpi">
+          <span class="kpi-val mono">3</span>
+          <span class="kpi-delta bad"><span class="arrow">↑</span> 1 since 8am</span>
+        </div>
+      </div>
+    </div>
+    <div class="widget col-3">
+      <div class="w-head">
+        <span class="dot-g"></span>
+        <span class="label">UPTIME</span>
+        <span class="badge mono">99.97%</span>
+      </div>
+      <div class="w-body">
+        <div class="kpi">
+          <span class="kpi-val mono">99.97%</span>
+          <span class="kpi-delta"><span class="arrow">↑</span> 30-day avg</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Clock + Weather + Forecast -->
+  <div class="grid" style="margin-bottom: 12px;">
+    <div class="widget col-4">
+      <div class="w-head">
+        <span class="dot-g"></span>
+        <span class="label">CLOCK · HKT</span>
+        <span class="badge mono" id="clock-zh">UTC+8</span>
+      </div>
+      <div class="w-body">
+        <div class="clock-big" id="clock">14:21:37</div>
+        <div class="clock-meta">2026·08·10 · MON · 農曆丙午年六月</div>
+      </div>
+    </div>
+
+    <div class="widget col-8">
+      <div class="w-head">
+        <span class="dot-w"></span>
+        <span class="label">WEATHER · HKO · KING'S PARK</span>
+        <span class="badge mono" style="color:var(--warn);">⚠ HEAT WARN</span>
+      </div>
+      <div class="w-body">
+        <div class="wx-row">
+          <div class="wx-icon">☀</div>
+          <div>
+            <div style="display:flex; align-items:baseline; gap:12px;">
+              <span class="wx-temp">34°C</span>
+              <span class="wx-cond">酷熱 · <span class="place">京士柏</span></span>
+            </div>
+            <div class="wx-meta">
+              <span>FEELS <b>36°</b></span>
+              <span>HUMID <b>51%</b></span>
+              <span>UV <b>0.6</b></span>
+              <span>WIND <b>SW 8km/h</b></span>
+              <span>SEA <b>29°C</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="wx-warn">⚠ HEAT WARNING · 多補充水分 · 做足防暑措施</div>
+        <div class="forecast">
+          <div class="forecast-day"><span class="d-name">TUE</span><span class="d-icon">☀</span><span class="d-num">35°</span><span class="d-min">29°</span></div>
+          <div class="forecast-day"><span class="d-name">WED</span><span class="d-icon">⛅</span><span class="d-num">34°</span><span class="d-min">28°</span></div>
+          <div class="forecast-day active"><span class="d-name">THU</span><span class="d-icon">⛅</span><span class="d-num">33°</span><span class="d-min">28°</span></div>
+          <div class="forecast-day"><span class="d-name">FRI</span><span class="d-icon">🌦</span><span class="d-num">32°</span><span class="d-min">27°</span></div>
+          <div class="forecast-day"><span class="d-name">SAT</span><span class="d-icon">🌦</span><span class="d-num">32°</span><span class="d-min">27°</span></div>
+          <div class="forecast-day"><span class="d-name">SUN</span><span class="d-icon">⛅</span><span class="d-num">32°</span><span class="d-min">27°</span></div>
+          <div class="forecast-day"><span class="d-name">MON</span><span class="d-icon">⛅</span><span class="d-num">33°</span><span class="d-min">27°</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: News (IDE table) + Note (log) -->
+  <div class="grid" style="margin-bottom: 12px;">
+    <div class="widget col-8">
+      <div class="w-head">
+        <span class="dot-g"></span>
+        <span class="label">NEWS · 18 SOURCES</span>
+        <span class="badge mono" id="news-ts">12s ago</span>
+      </div>
+      <div class="w-body" style="padding: 0;">
+        <div class="news-table">
+          <div class="news-row">
+            <span class="news-tag local">本地</span>
+            <span class="news-title">天文台：周三起連續四日有驟雨 酷熱天氣警告生效</span>
+            <span class="news-ts">2m</span>
+          </div>
+          <div class="news-row">
+            <span class="news-tag intl">SCMP</span>
+            <span class="news-title">Beijing urged to win Indian hearts, Hong Kong's hottest day: 5 weekend reads</span>
+            <span class="news-ts">8m</span>
+          </div>
+          <div class="news-row">
+            <span class="news-tag tech">VERGE</span>
+            <span class="news-title">Docker Sandboxes – Disposable, isolated sandboxes for AI agents</span>
+            <span class="news-ts">14m</span>
+          </div>
+          <div class="news-row">
+            <span class="news-tag intl">BBC</span>
+            <span class="news-title">At least 13 killed in Ukrainian drone strike on Russia's Tatarstan region</span>
+            <span class="news-ts">22m</span>
+          </div>
+          <div class="news-row">
+            <span class="news-tag tech">ARS</span>
+            <span class="news-title">DeepMind's hurricane breakthrough has surprised weather scientists</span>
+            <span class="news-ts">31m</span>
+          </div>
+          <div class="news-row">
+            <span class="news-tag local">RFI</span>
+            <span class="news-title">台风"白海豚"持续影响中国东部 上海多地被淹 943 个航班取消</span>
+            <span class="news-ts">47m</span>
+          </div>
+          <div class="news-row">
+            <span class="news-tag intl">NYT</span>
+            <span class="news-title">Ukrainian Drone Attack Kills 13 Deep Inside Russia</span>
+            <span class="news-ts">1h</span>
+          </div>
+          <div class="news-row">
+            <span class="news-tag tech">HN</span>
+            <span class="news-title">Implant – an extension to VS Code that exposes its APIs to coding agents</span>
+            <span class="news-ts">1h</span>
+          </div>
+          <div class="news-row">
+            <span class="news-tag tech">UNWIRE</span>
+            <span class="news-title">AMD 收購 Taalas 蘇姿丰新賭局：把模型刻進晶片</span>
+            <span class="news-ts">2h</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="widget col-4">
+      <div class="w-head">
+        <span class="dot-r"></span>
+        <span class="label">NOTE · 3 ITEMS</span>
+        <span class="badge mono">TODO</span>
+      </div>
+      <div class="w-body">
+        <div class="note-body"><span class="tag">// TODO</span><span class="comment"> pending</span>
+<ul>
+<li>Send 8 月 budget report</li>
+<li>Review HK weather forecast (stack mode)</li>
+<li>Design v3 polish — Sentry style</li>
+</ul>
+<span class="check">✓ all-on-track</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 4: Tweaks (console commands) -->
+  <div class="grid">
+    <div class="widget col-12">
+      <div class="w-head">
+        <span class="dot-r"></span>
+        <span class="label">TWEAKS · design preferences</span>
+        <span class="badge mono">5 options</span>
+      </div>
+      <div class="w-body">
+        <div class="tweaks-list">
+          <div class="tweaks-row">
+            <span class="tweaks-cmd">$ density</span>
+            <div class="seg">
+              <button>Compact</button>
+              <button class="on">Default</button>
+              <button>Airy</button>
+            </div>
+          </div>
+          <div class="tweaks-row">
+            <span class="tweaks-cmd">$ numbers</span>
+            <div class="seg">
+              <button>Lining</button>
+              <button class="on">Tabular</button>
+            </div>
+          </div>
+          <div class="tweaks-row">
+            <span class="tweaks-cmd">$ forecast</span>
+            <div class="seg">
+              <button class="on">Strip</button>
+              <button>Stack</button>
+              <button>Hide</button>
+            </div>
+          </div>
+          <div class="tweaks-row">
+            <span class="tweaks-cmd">$ theme</span>
+            <div class="seg">
+              <button>Indigo</button>
+              <button>Emerald</button>
+              <button>Rose</button>
+              <button>Amber</button>
+              <button class="on">Sentry</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Status bar (footer) -->
+<div class="statusbar">
+  <span class="status-pill ok"><span class="dot"></span>SYNC OK</span>
+  <span>18 FEEDS</span>
+  <span>·</span>
+  <span>HKO LIVE</span>
+  <span>·</span>
+  <span>3 ACTIVE WIDGETS</span>
+  <span class="spacer"></span>
+  <span id="statusbar-time">14:21:37 HKT</span>
+  <span>·</span>
+  <span>v0.6.2</span>
+</div>
+
+<script>
+  function tick() {
+    const n = new Date();
+    const p = x => String(x).padStart(2, "0");
+    const el = document.getElementById("clock");
+    const sb = document.getElementById("statusbar-time");
+    if (el) el.innerHTML = `${p(n.getHours())}:${p(n.getMinutes())}:<span class="sec">${p(n.getSeconds())}</span>`;
+    if (sb) sb.textContent = `${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())} HKT`;
+  }
+  tick(); setInterval(tick, 1000);
+
+  document.querySelectorAll(".seg").forEach(seg => {
+    seg.addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+      b.classList.add("on");
+    });
+  });
+</script>
+
+</body>
+</html>
