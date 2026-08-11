@@ -2464,12 +2464,14 @@ pickerEl.querySelectorAll("button[data-type]").forEach(b => {
       clock:   { w: 4, h: 4 },
       news:    { w: 4, h: 5 },
       note:    { w: 5, h: 4 },
+      bus:     { w: 4, h: 5 },
     }[type];
     const cfg = {
       weather: { place: "香港天文台", showWarn: true },
       clock:   { style: "hero", hour24: true, showLunar: true },
       news:    { cats: ["local","intl","tech"], lang: "all", autoRefresh: true, marquee: false, marqueeSpeed: "normal" },
       note:    { text: "", size: "md" },
+      bus:     { stopId: "", stopName: "", routes: [] },
     }[type];
     const item = { id: pid(), type, x: 0, y: 0, w: sizes.w, h: sizes.h, cfg };
     currentPage().items.push(item);
