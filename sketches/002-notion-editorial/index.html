@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>many-dash · Notion Editorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Notion-style design tokens (Editorial Monitor)
+     ============================================================ */
+  :root {
+    /* Surfaces — warm alternation */
+    --bg-canvas:  #ffffff;          /* page */
+    --bg-section: #f6f5f4;          /* warm white section */
+    --bg-card:    #ffffff;          /* widget surface */
+    --bg-tint:    rgba(0, 117, 222, 0.04);  /* blue tint */
+    --bg-soft:    rgba(0, 0, 0, 0.025);     /* hover */
+
+    /* Text — near-black, warm-tinted */
+    --ink-1:    rgba(0, 0, 0, 0.95);    /* primary */
+    --ink-2:    rgba(0, 0, 0, 0.75);    /* body */
+    --ink-3:    #615d59;                 /* secondary */
+    --ink-4:    #a39e98;                 /* muted */
+    --ink-5:    #c4c0bb;                 /* divider */
+
+    /* Accent — Notion Blue (single saturated color) */
+    --blue:       #0075de;
+    --blue-dark:  #005bab;
+    --blue-tint:  #f2f9ff;
+    --blue-ink:   #097fe8;
+
+    /* Semantic (used only as tints, not saturated) */
+    --good:    #1aae39;
+    --warn:    #dd5b00;
+    --bad:     #d44c47;
+
+    /* Status pill tints */
+    --tint-local:  rgba(245, 158, 11, 0.12);
+    --tint-intl:   rgba(0, 117, 222, 0.12);
+    --tint-tech:   rgba(154, 78, 174, 0.12);
+    --tint-finance:rgba(26, 174, 57, 0.12);
+    --tint-sports: rgba(221, 91, 0, 0.12);
+    --tint-ai:     rgba(0, 158, 167, 0.12);
+
+    /* Radius */
+    --r-4:  4px;
+    --r-6:  6px;
+    --r-8:  8px;
+    --r-12: 12px;
+    --r-16: 16px;
+    --r-pill: 9999px;
+
+    /* Spacing */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px;
+    --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+
+    /* Shadow — 4-layer Notion stack (max opacity 0.04) */
+    --shadow-card:
+      rgba(0,0,0,0.04) 0px 4px 18px,
+      rgba(0,0,0,0.027) 0px 2.025px 7.85px,
+      rgba(0,0,0,0.02) 0px 0.8px 2.93px,
+      rgba(0,0,0,0.01) 0px 0.175px 1.04px;
+    --shadow-deep:
+      rgba(0,0,0,0.01) 0px 1px 3px,
+      rgba(0,0,0,0.02) 0px 3px 7px,
+      rgba(0,0,0,0.02) 0px 7px 15px,
+      rgba(0,0,0,0.04) 0px 14px 28px,
+      rgba(0,0,0,0.05) 0px 23px 52px;
+
+    /* Borders — whisper-thin */
+    --border: 1px solid rgba(0, 0, 0, 0.1);
+
+    /* Motion */
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --t-fast: 120ms;
+    --t-med: 200ms;
+  }
+
+  /* ============================================================
+     Base
+     ============================================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg-canvas); }
+  body {
+    font-family: 'Inter', -apple-system, system-ui, 'Segoe UI', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: var(--blue); color: #fff; }
+
+  /* ============================================================
+     Top bar — clean white sticky
+     ============================================================ */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: var(--border);
+    padding: 14px 32px;
+    display: flex; align-items: center; gap: 24px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink-1);
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+    background: var(--ink-1);
+    border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .crumbs { display: flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 14px; }
+  .crumbs .sep { color: var(--ink-4); }
+  .crumbs .here { color: var(--ink-1); font-weight: 500; }
+  .topbar .spacer { flex: 1; }
+  .search {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-soft);
+    border: var(--border);
+    border-radius: var(--r-6);
+    padding: 5px 10px;
+    color: var(--ink-3);
+    font-size: 13px;
+    width: 240px;
+  }
+  .search kbd {
+    background: #fff;
+    border: var(--border);
+    border-radius: var(--r-4);
+    padding: 1px 6px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-left: auto;
+  }
+  .icon-btn {
+    width: 32px; height: 32px;
+    border-radius: var(--r-6);
+    border: var(--border);
+    background: #fff;
+    color: var(--ink-3);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all var(--t-fast) var(--ease);
+    font-size: 14px;
+  }
+  .icon-btn:hover { color: var(--ink-1); background: var(--bg-soft); }
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    border: 1px solid transparent;
+    border-radius: var(--r-4);
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary:hover { background: var(--blue-dark); }
+
+  /* ============================================================
+     Section — alternating warm-white bands
+     ============================================================ */
+  .section {
+    padding: 56px 32px;
+  }
+  .section.alt { background: var(--bg-section); }
+  .container { max-width: 1280px; margin: 0 auto; }
+  .section-title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 700;
+    font-size: 32px;
+    letter-spacing: -0.625px;
+    color: var(--ink-1);
+    margin-bottom: 6px;
+  }
+  .section-sub {
+    font-size: 15px;
+    color: var(--ink-3);
+    margin-bottom: 32px;
+    max-width: 640px;
+  }
+
+  /* ============================================================
+     Grid — 12-col with generous gaps (Notion whitespace)
+     ============================================================ */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+  }
+
+  /* ============================================================
+     Widget card — Notion soft card
+     ============================================================ */
+  .widget {
+    background: var(--bg-card);
+    border: var(--border);
+    border-radius: var(--r-12);
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 16px;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+    min-height: 140px;
+    position: relative;
+  }
+  .widget:hover {
+    box-shadow: var(--shadow-deep);
+    transform: translateY(-1px);
+  }
+
+  /* span helpers */
+  .col-3 { grid-column: span 3; }
+  .col-4 { grid-column: span 4; }
+  .col-5 { grid-column: span 5; }
+  .col-6 { grid-column: span 6; }
+  .col-8 { grid-column: span 8; }
+  .col-9 { grid-column: span 9; }
+  .col-12 { grid-column: span 12; }
+
+  /* ============================================================
+     Widget chrome — minimal header
+     ============================================================ */
+  .w-head {
+    display: flex; align-items: center; gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed rgba(0,0,0,0.06);
+  }
+  .w-icon {
+    width: 16px; height: 16px;
+    color: var(--ink-3);
+    flex-shrink: 0;
+    font-size: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .w-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-1);
+    letter-spacing: -0.13px;
+  }
+  .w-head .spacer { flex: 1; }
+
+  /* Status pill — Notion signature */
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: var(--r-pill);
+    letter-spacing: 0.125px;
+    white-space: nowrap;
+  }
+  .pill-blue { background: var(--blue-tint); color: var(--blue-ink); }
+  .pill-soft { background: var(--bg-soft); color: var(--ink-3); }
+  .pill-warn { background: rgba(221, 91, 0, 0.12); color: var(--warn); }
+  .pill-good { background: rgba(26, 174, 57, 0.12); color: var(--good); }
+  .pill-local  { background: var(--tint-local);  color: #92590a; }
+  .pill-intl   { background: var(--tint-intl);   color: var(--blue-ink); }
+  .pill-tech   { background: var(--tint-tech);   color: #6b3a82; }
+  .pill .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  /* ============================================================
+     Clock — Notion large-display serif
+     ============================================================ */
+  .clock-body {
+    display: flex; flex-direction: column; gap: 6px;
+    flex: 1; justify-content: center;
+  }
+  .clock-time {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--ink-1);
+    letter-spacing: -1.5px;
+    line-height: 1;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .clock-time .sec { color: var(--ink-4); font-weight: 600; }
+  .clock-date {
+    font-size: 14px;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .clock-date .lunar { color: var(--ink-4); margin-left: 6px; }
+
+  /* ============================================================
+     Weather — hero stat with badge
+     ============================================================ */
+  .wx-body {
+    display: flex; align-items: flex-start; gap: 20px;
+    flex: 1;
+  }
+  .wx-icon {
+    width: 64px; height: 64px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--warn);
+    background: rgba(245, 158, 11, 0.08);
+    border-radius: 50%;
+  }
+  .wx-icon svg { width: 70%; height: 70%; }
+  .wx-stat {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .wx-temp {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 52px;
+    font-weight: 700;
+    color: var(--ink-1);
+    letter-spacing: -1.5px;
+    line-height: 1;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .wx-cond {
+    font-size: 15px;
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+  .wx-cond .place { color: var(--ink-3); }
+  .wx-meta {
+    display: flex; gap: 14px;
+    font-size: 13px;
+    color: var(--ink-3);
+    margin-top: 8px;
+  }
+  .wx-meta b { color: var(--ink-1); font-weight: 600; }
+  .wx-warn {
+    font-size: 13px;
+    color: var(--warn);
+    padding: 10px 14px;
+    background: rgba(221, 91, 0, 0.06);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 var(--r-6) var(--r-6) 0;
+  }
+
+  /* 7-day forecast — generous spacing */
+  .forecast {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding-top: 16px;
+    border-top: 1px dashed rgba(0,0,0,0.06);
+  }
+  .forecast-day {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-size: 13px;
+    padding: 8px 4px;
+    border-radius: var(--r-8);
+    transition: background var(--t-fast) var(--ease);
+    cursor: pointer;
+  }
+  .forecast-day:hover { background: var(--bg-soft); }
+  .forecast-day .d-name {
+    font-size: 11px;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .forecast-day .d-icon { color: var(--blue); font-size: 16px; }
+  .forecast-day .d-max { color: var(--ink-1); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .forecast-day .d-min { color: var(--ink-4); font-variant-numeric: tabular-nums; font-size: 11px; }
+  .forecast-day .d-wave { font-size: 10px; opacity: 0.5; }
+
+  /* ============================================================
+     News — list with pill source labels (Notion badge pattern)
+     ============================================================ */
+  .news-body {
+    display: flex; flex-direction: column; gap: 2px;
+    flex: 1;
+    overflow: hidden;
+  }
+  .news-item {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: var(--r-8);
+    font-size: 14px;
+    color: var(--ink-2);
+    transition: background var(--t-fast) var(--ease);
+    cursor: pointer;
+  }
+  .news-item:hover { background: var(--bg-soft); }
+  .news-src {
+    display: inline-flex; align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+  }
+  .news-title {
+    color: var(--ink-2);
+    font-weight: 400;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .news-ts {
+    font-size: 11px;
+    color: var(--ink-4);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ============================================================
+     Note — block, editorial paper style
+     ============================================================ */
+  .note-body {
+    flex: 1;
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .note-body .tag {
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .note-body ul { list-style: none; padding-left: 0; }
+  .note-body li {
+    padding: 4px 0;
+    border-bottom: 1px dashed rgba(0,0,0,0.05);
+  }
+  .note-body li:last-child { border-bottom: none; }
+
+  /* ============================================================
+     Activity — large stat cards (Notion metric pattern)
+     ============================================================ */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .stat {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 12px;
+    border-radius: var(--r-8);
+    background: var(--bg-soft);
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--ink-4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .stat-val {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink-1);
+    letter-spacing: -0.5px;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .stat-delta {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--good);
+  }
+  .stat-delta.bad { color: var(--bad); }
+
+  /* ============================================================
+     Tweaks — minimal inline section
+     ============================================================ */
+  .tweaks-list {
+    display: flex; flex-direction: column; gap: 14px;
+    flex: 1;
+  }
+  .tweaks-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .tweaks-label {
+    font-size: 14px;
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+  .seg {
+    display: inline-flex;
+    background: var(--bg-soft);
+    border: var(--border);
+    border-radius: var(--r-6);
+    overflow: hidden;
+  }
+  .seg button {
+    background: transparent;
+    border: none;
+    color: var(--ink-3);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .seg button.on {
+    background: #fff;
+    color: var(--ink-1);
+    box-shadow: var(--shadow-card);
+    font-weight: 600;
+  }
+
+  .footnote {
+    margin-top: 32px;
+    padding: 32px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-4);
+    border-top: var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-mark">M</span>
+    many-dash
+  </div>
+  <div class="crumbs">
+    <span>Workspace</span>
+    <span class="sep">/</span>
+    <span class="here">Dashboard</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="search">
+    <span>🔍</span>
+    <span style="flex:1">Search widgets…</span>
+    <kbd>⌘K</kbd>
+  </div>
+  <button class="icon-btn" title="Settings">⚙</button>
+  <button class="icon-btn" title="Theme">◐</button>
+  <button class="btn-primary">+ New widget</button>
+</div>
+
+<!-- Section 1: Status row -->
+<div class="section">
+  <div class="container">
+    <h2 class="section-title">Today</h2>
+    <p class="section-sub">2026年8月10日 · 酷熱天氣警告生效 · 工作日下午</p>
+
+    <div class="grid">
+
+      <!-- Clock -->
+      <div class="widget col-4">
+        <div class="w-head">
+          <span class="w-icon">◷</span>
+          <span class="w-label">時鐘</span>
+          <div class="spacer"></div>
+          <span class="pill pill-blue"><span class="live-dot"></span>live</span>
+        </div>
+        <div class="clock-body">
+          <div class="clock-time" id="clock">14:21:37</div>
+          <div class="clock-date">2026年8月10日 · 星期一<span class="lunar">農曆 丙午年六月</span></div>
+        </div>
+      </div>
+
+      <!-- Weather -->
+      <div class="widget col-5">
+        <div class="w-head">
+          <span class="w-icon">☀</span>
+          <span class="w-label">天氣</span>
+          <div class="spacer"></div>
+          <span class="pill pill-soft">京士柏</span>
+        </div>
+        <div class="wx-body">
+          <div class="wx-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>
+          </div>
+          <div class="wx-stat">
+            <div class="wx-temp">34°</div>
+            <div class="wx-cond">酷熱 · <span class="place">京士柏</span></div>
+            <div class="wx-meta">
+              <span>體感 <b>36°</b></span>
+              <span>濕度 <b>51%</b></span>
+              <span>UV <b>0.6</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="wx-warn">⚠ 酷熱天氣警告現正生效，多補充水分及做足防暑措施</div>
+        <div class="forecast">
+          <div class="forecast-day"><span class="d-name">Tue</span><span class="d-icon">☀</span><b class="d-max">35°</b><span class="d-min">29°</span></div>
+          <div class="forecast-day"><span class="d-name">Wed</span><span class="d-icon">⛅</span><b class="d-max">34°</b><span class="d-min">28°</span></div>
+          <div class="forecast-day"><span class="d-name">Thu</span><span class="d-icon">⛅</span><b class="d-max">33°</b><span class="d-min">28°</span></div>
+          <div class="forecast-day"><span class="d-name">Fri</span><span class="d-icon">🌦</span><b class="d-max">32°</b><span class="d-min">27°</span></div>
+          <div class="forecast-day"><span class="d-name">Sat</span><span class="d-icon">🌦</span><b class="d-max">32°</b><span class="d-min">27°</span></div>
+          <div class="forecast-day"><span class="d-name">Sun</span><span class="d-icon">⛅</span><b class="d-max">32°</b><span class="d-min">27°</span></div>
+          <div class="forecast-day"><span class="d-name">Mon</span><span class="d-icon">⛅</span><b class="d-max">33°</b><span class="d-min">27°</span></div>
+        </div>
+      </div>
+
+      <!-- Note -->
+      <div class="widget col-3">
+        <div class="w-head">
+          <span class="w-icon">✎</span>
+          <span class="w-label">便條</span>
+          <div class="spacer"></div>
+          <span class="pill pill-soft">3 items</span>
+        </div>
+        <div class="note-body"><span class="tag">// TODO</span>
+<ul>
+<li>Send 8 月 budget report</li>
+<li>Review HK weather widget forecast layout (stack mode)</li>
+<li>Many-dash design polish v2 — Notion style</li>
+</ul></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Section 2: News + Activity (warm white band) -->
+<div class="section alt">
+  <div class="container">
+    <h2 class="section-title">News & Activity</h2>
+    <p class="section-sub">18 sources · updated continuously · 24-hour window</p>
+
+    <div class="grid">
+
+      <!-- News -->
+      <div class="widget col-9">
+        <div class="w-head">
+          <span class="w-icon">▤</span>
+          <span class="w-label">新聞 · 18 sources</span>
+          <div class="spacer"></div>
+          <span class="pill pill-good"><span class="live-dot"></span>live</span>
+          <span class="pill pill-soft">12s ago</span>
+        </div>
+        <div class="news-body">
+          <div class="news-item">
+            <span class="news-src pill-local">本地</span>
+            <span class="news-title">天文台：周三起連續四日有驟雨 酷熱天氣警告生效</span>
+            <span class="news-ts">2m</span>
+          </div>
+          <div class="news-item">
+            <span class="news-src pill-intl">SCMP</span>
+            <span class="news-title">Beijing urged to win Indian hearts, Hong Kong's hottest day: 5 weekend reads</span>
+            <span class="news-ts">8m</span>
+          </div>
+          <div class="news-item">
+            <span class="news-src pill-tech">Verge</span>
+            <span class="news-title">Docker Sandboxes – Disposable, isolated sandboxes for AI agents</span>
+            <span class="news-ts">14m</span>
+          </div>
+          <div class="news-item">
+            <span class="news-src pill-intl">BBC</span>
+            <span class="news-title">At least 13 killed in Ukrainian drone strike on Russia's Tatarstan region</span>
+            <span class="news-ts">22m</span>
+          </div>
+          <div class="news-item">
+            <span class="news-src pill-tech">Ars</span>
+            <span class="news-title">DeepMind's hurricane breakthrough has surprised weather scientists</span>
+            <span class="news-ts">31m</span>
+          </div>
+          <div class="news-item">
+            <span class="news-src pill-local">RFI</span>
+            <span class="news-title">台风"白海豚"持续影响中国东部 上海多地被淹 943 个航班取消</span>
+            <span class="news-ts">47m</span>
+          </div>
+          <div class="news-item">
+            <span class="news-src pill-intl">NYT</span>
+            <span class="news-title">Ukrainian Drone Attack Kills 13 Deep Inside Russia</span>
+            <span class="news-ts">1h</span>
+          </div>
+          <div class="news-item">
+            <span class="news-src pill-tech">HN</span>
+            <span class="news-title">Implant – an extension to VS Code that exposes its APIs to coding agents</span>
+            <span class="news-ts">1h</span>
+          </div>
+          <div class="news-item">
+            <span class="news-src pill-tech">unwire</span>
+            <span class="news-title">AMD 收購 Taalas 蘇姿丰新賭局：把模型刻進晶片</span>
+            <span class="news-ts">2h</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity -->
+      <div class="widget col-3">
+        <div class="w-head">
+          <span class="w-icon">◆</span>
+          <span class="w-label">Activity</span>
+          <div class="spacer"></div>
+          <span class="pill pill-soft">24h</span>
+        </div>
+        <div class="stat-row">
+          <div class="stat">
+            <span class="stat-label">Reads</span>
+            <span class="stat-val">847</span>
+            <span class="stat-delta">↑ 12.4%</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Hits</span>
+            <span class="stat-val">312</span>
+            <span class="stat-delta">↑ 5.1%</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Failed</span>
+            <span class="stat-val">7</span>
+            <span class="stat-delta bad">↓ 2.0%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Tweaks -->
+<div class="section">
+  <div class="container">
+    <h2 class="section-title">Design preferences</h2>
+    <p class="section-sub">Adjust how widgets display — saved per widget.</p>
+
+    <div class="grid">
+      <div class="widget col-6">
+        <div class="w-head">
+          <span class="w-icon">⊕</span>
+          <span class="w-label">Tweaks</span>
+          <div class="spacer"></div>
+          <span class="pill pill-blue">edit</span>
+        </div>
+        <div class="tweaks-list">
+          <div class="tweaks-row">
+            <span class="tweaks-label">Density</span>
+            <div class="seg">
+              <button>Compact</button>
+              <button class="on">Default</button>
+              <button>Airy</button>
+            </div>
+          </div>
+          <div class="tweaks-row">
+            <span class="tweaks-label">Number style</span>
+            <div class="seg">
+              <button>Lining</button>
+              <button class="on">Tabular</button>
+            </div>
+          </div>
+          <div class="tweaks-row">
+            <span class="tweaks-label">Forecast layout</span>
+            <div class="seg">
+              <button class="on">Strip</button>
+              <button>Stack</button>
+              <button>Hide</button>
+            </div>
+          </div>
+          <div class="tweaks-row">
+            <span class="tweaks-label">Theme</span>
+            <div class="seg">
+              <button class="on">Light</button>
+              <button>Dark</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="widget col-6">
+        <div class="w-head">
+          <span class="w-icon">≡</span>
+          <span class="w-label">Reading list</span>
+          <div class="spacer"></div>
+          <span class="pill pill-soft">12 saved</span>
+        </div>
+        <div class="note-body">
+          A warm, paper-like editorial space for thoughts and reading notes.
+          Notion's signature: ample whitespace, whisper-thin borders, single blue accent.
+          Use this surface when the dashboard should feel like quality paper
+          rather than a digital control panel.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footnote">
+  002-notion-editorial · warm cream + pure white alternation · Source Serif 4 display + Inter body · Notion Blue accent
+</div>
+
+<script>
+  // Live clock
+  function tick() {
+    const n = new Date();
+    const p = x => String(x).padStart(2, "0");
+    const el = document.getElementById("clock");
+    if (el) el.innerHTML = `${p(n.getHours())}:${p(n.getMinutes())}:<span class="sec">${p(n.getSeconds())}</span>`;
+  }
+  tick(); setInterval(tick, 1000);
+
+  // Tweak interactions
+  document.querySelectorAll(".seg").forEach(seg => {
+    seg.addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+      b.classList.add("on");
+    });
+  });
+</script>
+
+</body>
+</html>
