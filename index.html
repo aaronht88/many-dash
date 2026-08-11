@@ -805,7 +805,19 @@
     font-size: calc(10px * var(--fs-scale));
     color: var(--muted-2);
     font-variant-numeric: tabular-nums;
+    display: flex; justify-content: space-between; align-items: center; gap: 6px;
   }
+  .w-bus .bus-status {
+    font-family: var(--font-mono);
+    font-size: calc(9px * var(--fs-scale));
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted-2);
+    white-space: nowrap;
+  }
+  .w-bus .bus-status.ok   { color: var(--good); }
+  .w-bus .bus-status.warn { color: var(--warn); }
+  .w-bus .bus-status.err  { color: var(--bad); }
   .w-bus .bus-list {
     display: flex; flex-direction: column;
     flex: 1; overflow-y: auto; min-height: 0;
@@ -2143,7 +2155,66 @@ function mountBus(item, body, itemEl) {
   const stopName = item.cfg.stopName || stopId;
   const filterRoutes = item.cfg.routes || null;  // null = all
 
+  // Module-level state for stale-while-revalidate
+  let lastSuccessAt = 0;     // ms timestamp of last successful fetch
+  let lastFetchMs = 0;       // duration of last fetch (for debug)
+  let lastSuccessSnapshot = null;  // { stopName, generated, enriched, listHtml } — last good render payload
+  let fetchInFlight = false;
+  let intervalMs = 60 * 1000;  // 60s instead of 30s — KMB data refreshes ~30s but 60s halves flicker
+
+  function fmtAge(ms) {
+    if (ms < 0) return "";
+    if (ms < 60_000) return Math.floor(ms / 1000) + "s 前";
+    return Math.floor(ms / 60_000) + " 分鐘前";
+  }
+
+  function paintStatus(statusClass, statusText) {
+    const el = body.querySelector(".bus-status");
+    if (!el) return;
+    el.className = "bus-status " + (statusClass || "");
+    el.textContent = statusText;
+  }
+
+  // Render full bus list to body. Keeps the same top wrapper so we can paint a status line in place.
+  function renderList(payload) {
+    const { enriched, generated, listHtml } = payload;
+    lastSuccessSnapshot = payload;
+    lastSuccessAt = Date.now();
+    body.innerHTML = `
+      <div class="bus-stop-name">${escapeHtml(stopName)}<span class="stop-no">${stopId.slice(0, 8)}…</span></div>
+      <div class="bus-meta">
+        <span>KMB · ${enriched.length} 班次 · ${new Date(generated || Date.now()).toLocaleTimeString("zh-HK", {hour:"2-digit", minute:"2-digit"})}</span>
+        <span class="bus-status"></span>
+      </div>
+      <div class="bus-list">${listHtml}</div>
+    `;
+    // First paint: status = "✓ 剛剛" (good)
+    paintStatus("ok", "↻ " + fmtAge(0));
+  }
+
+  function renderEmpty(payload) {
+    lastSuccessSnapshot = null;
+    lastSuccessAt = 0;
+    body.innerHTML = `
+      <div class="bus-stop-name">${escapeHtml(stopName)}<span class="stop-no">${stopId.slice(0, 8)}…</span></div>
+      <div class="bus-meta">
+        <span>未來 30 分鐘冇班次</span>
+        <span class="bus-status"></span>
+      </div>
+    `;
+    paintStatus("ok", "");
+  }
+
   function renderError(msg, detail) {
+    // Stale-while-revalidate: if we have a previous snapshot, keep showing it + overlay error hint.
+    if (lastSuccessSnapshot) {
+      // Don't replace body — just update the status line with the error.
+      const ageMs = Date.now() - lastSuccessAt;
+      paintStatus("err", `⚠ 更新失敗 · keep 顯示 ${fmtAge(ageMs)} 嘅舊 data`);
+      console.warn(`[bus] update failed, keeping stale data (${fmtAge(ageMs)} old):`, msg, detail || "");
+      return;
+    }
+    // No prior data → show full error UI
     body.innerHTML = `<div style="color:var(--muted);padding:8px;display:flex;flex-direction:column;gap:6px;">
       <span>⚠ ${msg}</span>
       ${detail ? `<code style="font-size:10px;color:var(--muted-2);word-break:break-all;">${escapeHtml(detail)}</code>` : ""}
@@ -2155,12 +2226,15 @@ function mountBus(item, body, itemEl) {
 
   async function load() {
     if (!body.isConnected) return;
-    body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
+    if (fetchInFlight) return;  // skip overlapping fetches
+    fetchInFlight = true;
+    const t0 = performance.now();
     try {
-      // Note: KMB API directly supports CORS `*`, so we can fetch directly.
-      // rss_proxy.py also exposes /api/bus/kmb/stop-eta/<id> with same payload + cache.
-      // Use direct KMB API to avoid local proxy dependency.
       const r = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}`, { cache: "no-store" });
+      const fetchMs = performance.now() - t0;
+      lastFetchMs = fetchMs;
+      console.log(`[bus] fetch ${stopId} took ${fetchMs.toFixed(0)}ms`);
+      if (!body.isConnected) return;
       if (!r.ok) { renderError("KMB 連線失敗", `HTTP ${r.status}`); return; }
       const j = await r.json();
       if (!body.isConnected) return;
@@ -2180,10 +2254,7 @@ function mountBus(item, body, itemEl) {
         .sort((a, b) => a._min - b._min)
         .slice(0, 12);
       if (enriched.length === 0) {
-        body.innerHTML = `
-          <div class="bus-stop-name">${escapeHtml(stopName)}<span class="stop-no">${stopId.slice(0, 8)}…</span></div>
-          <div class="bus-meta">未來 30 分鐘冇班次</div>
-        `;
+        renderEmpty({ generated: j.generated_timestamp, enriched: [], listHtml: "" });
         return;
       }
       const listHtml = enriched.map(d => {
@@ -2201,23 +2272,36 @@ function mountBus(item, body, itemEl) {
           </div>
         `;
       }).join("");
-      body.innerHTML = `
-        <div class="bus-stop-name">${escapeHtml(stopName)}<span class="stop-no">${stopId.slice(0, 8)}…</span></div>
-        <div class="bus-meta">KMB · ${enriched.length} 班次 · ${new Date(j.generated_timestamp || Date.now()).toLocaleTimeString("zh-HK", {hour:"2-digit", minute:"2-digit"})}</div>
-        <div class="bus-list">${listHtml}</div>
-      `;
+      renderList({ enriched, generated: j.generated_timestamp, listHtml });
     } catch (e) {
       console.error("[bus] load failed:", e);
       if (body.isConnected) renderError("巴士 widget 載入失敗", String(e && e.message || e));
+    } finally {
+      fetchInFlight = false;
     }
   }
 
-  // Auto-refresh every 30s (KMB data refreshes ~30s)
-  const t = setInterval(load, 30 * 1000);
+  // Status updater — paints the age line every 5s without re-fetching
+  function refreshStatus() {
+    if (!body.isConnected) return;
+    if (!lastSuccessSnapshot) return;
+    const ageMs = Date.now() - lastSuccessAt;
+    if (lastFetchMs > 3000) {
+      paintStatus("warn", `↻ ${fmtAge(ageMs)} · fetch ${lastFetchMs.toFixed(0)}ms (慢)`);
+    } else {
+      paintStatus("ok", `↻ ${fmtAge(ageMs)}`);
+    }
+  }
+
+  // Initial paint: loader
+  body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
+  // Auto-refresh: fetch + status refresh
+  const t = setInterval(load, intervalMs);
+  const ts = setInterval(refreshStatus, 5 * 1000);
   const mo = new MutationObserver(() => {
-    if (!document.body.contains(itemEl)) { clearInterval(t); mo.disconnect(); }
+    if (!document.body.contains(itemEl)) { clearInterval(t); clearInterval(ts); mo.disconnect(); }
   });
-  busTimers.set(itemEl, { t, mo });
+  busTimers.set(itemEl, { t, ts, mo });
   mo.observe(document.body, { childList: true, subtree: true });
   load();
 }
