@@ -783,6 +783,155 @@
   .grid-stack-item.w-note.size-lg .w-note textarea { font-size: calc(18px * var(--fs-scale)); line-height: 1.7; }
 
   /* ============================================================
+     Bus widget (KMB ETA list)
+     ============================================================ */
+  .w-bus .body { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .w-bus .bus-stop-name {
+    font-size: calc(13px * var(--fs-scale));
+    font-weight: 510;
+    color: var(--text);
+    letter-spacing: -0.13px;
+    line-height: 1.3;
+  }
+  .w-bus .bus-stop-name .stop-no {
+    font-family: var(--font-mono);
+    font-size: calc(10px * var(--fs-scale));
+    color: var(--muted-2);
+    margin-left: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .w-bus .bus-meta {
+    font-family: var(--font-mono);
+    font-size: calc(10px * var(--fs-scale));
+    color: var(--muted-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .w-bus .bus-list {
+    display: flex; flex-direction: column;
+    flex: 1; overflow-y: auto; min-height: 0;
+  }
+  .w-bus .bus-row {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 8px;
+    border-radius: var(--r-sm);
+    font-size: calc(13px * var(--fs-scale));
+    color: var(--text-2);
+    transition: background var(--t-fast) var(--ease);
+  }
+  .w-bus .bus-row:hover { background: rgba(255,255,255,0.025); }
+  .w-bus .bus-route {
+    font-family: var(--font-mono);
+    font-size: calc(12px * var(--fs-scale));
+    font-weight: 600;
+    color: var(--accent-2);
+    background: rgba(113, 112, 255, 0.12);
+    border-radius: var(--r-sm);
+    text-align: center;
+    padding: 3px 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .w-bus .bus-dest {
+    color: var(--text-2);
+    font-weight: 400;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .w-bus .bus-eta {
+    font-family: var(--font-mono);
+    font-size: calc(12px * var(--fs-scale));
+    color: var(--text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .w-bus .bus-eta.eta-now { color: var(--good); }
+  .w-bus .bus-eta.eta-soon { color: var(--warn); }
+  .w-bus .bus-rmk {
+    font-family: var(--font-mono);
+    font-size: calc(9px * var(--fs-scale));
+    color: var(--muted-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .w-bus .bus-pick-stop {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    text-align: center;
+    padding: 16px;
+  }
+  .w-bus .bus-pick-stop .glyph { font-size: 32px; }
+  .w-bus .bus-pick-stop .hint { font-size: 12px; }
+
+  /* Bus stop picker inside settings modal */
+  .bus-picker {
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 320px; overflow: hidden;
+  }
+  .bus-picker input {
+    background: var(--panel-2);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    border-radius: var(--r-sm);
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+  }
+  .bus-picker input:focus { border-color: var(--accent); }
+  .bus-picker .results {
+    flex: 1; overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--panel-2);
+    max-height: 240px;
+  }
+  .bus-picker .results .stop-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .bus-picker .results .stop-row:hover { background: rgba(255,255,255,0.04); }
+  .bus-picker .results .stop-row .stop-name { font-weight: 500; }
+  .bus-picker .results .stop-row .stop-id { font-family: var(--font-mono); color: var(--muted-2); font-size: 10px; }
+  .bus-picker .empty { padding: 12px; color: var(--muted); text-align: center; font-size: 12px; }
+  .bus-picker .loading { padding: 12px; color: var(--muted); text-align: center; font-size: 12px; }
+  .bus-routes-filter {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    max-height: 160px; overflow-y: auto;
+    padding: 6px; background: var(--panel-2); border-radius: var(--r-sm);
+  }
+  .bus-routes-filter .chip {
+    display: inline-flex;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 3px 8px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-2);
+    user-select: none;
+  }
+  .bus-routes-filter .chip.on {
+    background: rgba(113, 112, 255, 0.20);
+    border-color: var(--accent);
+    color: var(--accent-2);
+  }
+  .bus-routes-filter .chip:hover { background: rgba(255,255,255,0.06); }
+
+  /* ============================================================
      News widget — selected cats in body (top), marquee
      ============================================================ */
   .w-news > .w-head .selected-cats,
@@ -1198,6 +1347,7 @@
       <button data-type="clock"><span class="glyph">🕒</span>時鐘</button>
       <button data-type="news"><span class="glyph">📰</span>新聞</button>
       <button data-type="note"><span class="glyph">📝</span>便條</button>
+      <button data-type="bus"><span class="glyph">🚌</span>巴士</button>
     </div>
     <div class="actions">
       <button class="tool" id="pickerClose">取消</button>
@@ -1448,6 +1598,7 @@ function widgetLimits(type) {
     case "clock":   return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
     case "news":    return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
     case "note":    return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
+    case "bus":     return { minW: 2, minH: 2, maxW: 12, maxH: 24 };
     default:        return { minW: 1, minH: 1, maxW: 24, maxH: 24 };
   }
 }
@@ -1598,6 +1749,7 @@ function widgetTitle(item) {
   if (item.type === "clock")   return "🕒 時鐘";
   if (item.type === "news")    return "📰 新聞";
   if (item.type === "note")    return "📝 便條";
+  if (item.type === "bus")     return "🚌 " + (item.cfg.stopName || "巴士");
   return item.type;
 }
 
@@ -1606,6 +1758,7 @@ function fillWidgetBody(item, body, el, itemEl) {
   if (item.type === "clock")   return mountClock(item, body, itemEl);
   if (item.type === "news")    return mountNews(item, body, itemEl);
   if (item.type === "note")    return mountNote(item, body, itemEl);
+  if (item.type === "bus")     return mountBus(item, body, itemEl);
 }
 
 // HKO weather icon → emoji + short label + line-art SVG (currentColor follows CSS accent)
@@ -1888,6 +2041,106 @@ function mountWeather(item, body, itemEl) {
   };
   if (itemEl.isConnected) startRefresh();
   else setTimeout(startRefresh, 0);
+}
+
+/* --- Bus (KMB ETA list) --- */
+const busTimers = new WeakMap();
+function mountBus(item, body, itemEl) {
+  // clear any prior timer
+  const old = busTimers.get(itemEl);
+  if (old) { clearInterval(old.t); old.mo.disconnect(); }
+
+  const stopId = item.cfg.stopId;
+  if (!stopId) {
+    // Pick-a-stop placeholder
+    body.innerHTML = `
+      <div class="bus-pick-stop">
+        <div class="glyph">🚌</div>
+        <div>未揀巴士站</div>
+        <div class="hint">右擊 widget → 設定，揀 KMB 巴士站</div>
+      </div>`;
+    return;
+  }
+  const stopName = item.cfg.stopName || stopId;
+  const filterRoutes = item.cfg.routes || null;  // null = all
+
+  function renderError(msg, detail) {
+    body.innerHTML = `<div style="color:var(--muted);padding:8px;display:flex;flex-direction:column;gap:6px;">
+      <span>⚠ ${msg}</span>
+      ${detail ? `<code style="font-size:10px;color:var(--muted-2);word-break:break-all;">${escapeHtml(detail)}</code>` : ""}
+      <button class="tool" data-act="retry" style="font-size:11px;padding:3px 8px;">↻ 重試</button>
+    </div>`;
+    const retryBtn = body.querySelector('[data-act="retry"]');
+    if (retryBtn) retryBtn.addEventListener("click", (e) => { e.stopPropagation(); load(); });
+  }
+
+  async function load() {
+    if (!body.isConnected) return;
+    body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
+    try {
+      // Note: KMB API directly supports CORS `*`, so we can fetch directly.
+      // rss_proxy.py also exposes /api/bus/kmb/stop-eta/<id> with same payload + cache.
+      // Use direct KMB API to avoid local proxy dependency.
+      const r = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}`, { cache: "no-store" });
+      if (!r.ok) { renderError("KMB 連線失敗", `HTTP ${r.status}`); return; }
+      const j = await r.json();
+      if (!body.isConnected) return;
+      const raw = (j && j.data) || [];
+      // Filter by routes if user selected specific routes
+      let data = raw;
+      if (Array.isArray(filterRoutes) && filterRoutes.length > 0) {
+        data = data.filter(d => filterRoutes.includes(String(d.route)));
+      }
+      // Compute ETA minutes + sort by eta asc; keep top 12
+      const now = Date.now();
+      const enriched = data.map(d => {
+        const t = d.eta ? new Date(d.eta).getTime() : null;
+        const min = t ? Math.round((t - now) / 60000) : null;
+        return { ...d, _min: min };
+      }).filter(d => d._min !== null)
+        .sort((a, b) => a._min - b._min)
+        .slice(0, 12);
+      if (enriched.length === 0) {
+        body.innerHTML = `
+          <div class="bus-stop-name">${escapeHtml(stopName)}<span class="stop-no">${stopId.slice(0, 8)}…</span></div>
+          <div class="bus-meta">未來 30 分鐘冇班次</div>
+        `;
+        return;
+      }
+      const listHtml = enriched.map(d => {
+        let etaText, etaClass = "";
+        if (d._min <= 0) { etaText = "即將"; etaClass = "eta-now"; }
+        else if (d._min === 1) { etaText = "1 分鐘"; etaClass = "eta-now"; }
+        else if (d._min <= 5) { etaText = d._min + " 分鐘"; etaClass = "eta-soon"; }
+        else if (d._min < 60) { etaText = d._min + " 分鐘"; }
+        else { etaText = Math.floor(d._min / 60) + "h" + (d._min % 60) + "m"; }
+        return `
+          <div class="bus-row">
+            <span class="bus-route">${escapeHtml(String(d.route))}</span>
+            <span class="bus-dest" title="${escapeHtml(d.dest_tc || '')}">${escapeHtml(d.dest_tc || '—')}</span>
+            <span class="bus-eta ${etaClass}">${etaText}</span>
+          </div>
+        `;
+      }).join("");
+      body.innerHTML = `
+        <div class="bus-stop-name">${escapeHtml(stopName)}<span class="stop-no">${stopId.slice(0, 8)}…</span></div>
+        <div class="bus-meta">KMB · ${enriched.length} 班次 · ${new Date(j.generated_timestamp || Date.now()).toLocaleTimeString("zh-HK", {hour:"2-digit", minute:"2-digit"})}</div>
+        <div class="bus-list">${listHtml}</div>
+      `;
+    } catch (e) {
+      console.error("[bus] load failed:", e);
+      if (body.isConnected) renderError("巴士 widget 載入失敗", String(e && e.message || e));
+    }
+  }
+
+  // Auto-refresh every 30s (KMB data refreshes ~30s)
+  const t = setInterval(load, 30 * 1000);
+  const mo = new MutationObserver(() => {
+    if (!document.body.contains(itemEl)) { clearInterval(t); mo.disconnect(); }
+  });
+  busTimers.set(itemEl, { t, mo });
+  mo.observe(document.body, { childList: true, subtree: true });
+  load();
 }
 
 /* --- Clock (live) --- */
@@ -2474,6 +2727,40 @@ function renderSettingsForm(item) {
       </div>
     `;
   }
+  if (item.type === "bus") {
+    const stopId = item.cfg.stopId || "";
+    const stopName = item.cfg.stopName || "";
+    const filterRoutes = item.cfg.routes || [];
+    return `
+      ${bgField}
+      ${fsField}
+      ${commonFields}
+      <div class="field">
+        <label>KMB 巴士站</label>
+        <div class="bus-picker">
+          <input type="text" id="f-bus-search" placeholder="用中文 / 英文 / stop ID 搜尋…" autocomplete="off" />
+          <div class="results" id="f-bus-results">
+            <div class="loading">點上面輸入 → 撳「搜全部」→ 從結果揀一個站</div>
+          </div>
+          <button class="tool" id="f-bus-search-all" style="font-size:11px;padding:4px 10px;">搜全部</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>已選巴士站</label>
+        <div style="font-size:13px;color:var(--text-2);">
+          <span id="f-bus-current">${stopName ? escapeHtml(stopName) : "未揀"}</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted-2);margin-left:6px;" id="f-bus-current-id">${stopId ? stopId : ""}</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>路線 filter（唔揀 = 全部）</label>
+        <div class="bus-routes-filter" id="f-bus-routes">
+          <span class="hint" style="color:var(--muted-2);">先去揀一個巴士站，呢度會列出該站有嘅路線</span>
+        </div>
+        <div class="hint" style="color:var(--muted-2);">點 chip 切換揀選 / 取消揀選</div>
+      </div>
+    `;
+  }
   return "";
 }
 
@@ -2683,6 +2970,170 @@ function bindSettingsForm(item) {
       saveState();
       mountPage();
     });
+  }
+
+  /* ============================================================
+     Bus widget settings: search KMB stops, select, filter routes
+     ============================================================ */
+  if (item.type === "bus") {
+    const searchInput = document.getElementById("f-bus-search");
+    const searchAllBtn = document.getElementById("f-bus-search-all");
+    const resultsBox = document.getElementById("f-bus-results");
+    const currentName = document.getElementById("f-bus-current");
+    const currentId = document.getElementById("f-bus-current-id");
+    const routesBox = document.getElementById("f-bus-routes");
+
+    let allStops = null;  // cache master stop list for session
+
+    function renderStopResults(stops) {
+      if (!stops || stops.length === 0) {
+        resultsBox.innerHTML = `<div class="empty">冇結果。試下其他關鍵字或 stop ID。</div>`;
+        return;
+      }
+      resultsBox.innerHTML = stops.slice(0, 50).map(s => `
+        <div class="stop-row" data-stop="${s.stop}" data-name="${escapeHtml(s.name_tc || s.name_en || s.stop)}">
+          <span class="stop-name">${escapeHtml(s.name_tc || s.name_en || s.stop)}</span>
+          <span class="stop-id">${s.stop.slice(0, 8)}…</span>
+        </div>
+      `).join("");
+      resultsBox.querySelectorAll(".stop-row").forEach(row => {
+        row.addEventListener("click", () => {
+          const sid = row.dataset.stop;
+          const sname = row.dataset.name;
+          item.cfg.stopId = sid;
+          item.cfg.stopName = sname;
+          item.cfg.routes = [];  // reset route filter when stop changes
+          saveState();
+          // Update displayed current stop
+          if (currentName) currentName.textContent = sname;
+          if (currentId) currentId.textContent = sid;
+          // Update widget title
+          const titleEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"] .title`);
+          if (titleEl) titleEl.textContent = widgetTitle(item);
+          // Show hint in routes box + trigger route fetch
+          if (routesBox) routesBox.innerHTML = `<span class="hint" style="color:var(--muted-2);">載入路線中…</span>`;
+          loadRoutesForStop(sid);
+          // Remount widget body
+          const itemEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+          if (itemEl) {
+            const body = itemEl.querySelector(".body");
+            if (body) {
+              body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
+              const fakeEl = document.createElement('div');
+              fillWidgetBody(item, body, fakeEl, itemEl);
+              fakeEl.remove();
+            }
+          }
+        });
+      });
+    }
+
+    async function loadRoutesForStop(stopId) {
+      try {
+        const r = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}`, { cache: "no-store" });
+        if (!r.ok) { if (routesBox) routesBox.innerHTML = `<span class="hint" style="color:var(--bad);">連線失敗 (HTTP ${r.status})</span>`; return; }
+        const j = await r.json();
+        const routes = Array.from(new Set((j.data || []).map(d => String(d.route)))).sort();
+        if (routes.length === 0) {
+          if (routesBox) routesBox.innerHTML = `<span class="hint" style="color:var(--muted-2);">此站未來冇班次</span>`;
+          return;
+        }
+        const selected = item.cfg.routes || [];
+        routesBox.innerHTML = routes.map(r => {
+          const on = selected.length === 0 || selected.includes(r);
+          return `<span class="chip ${on ? 'on' : ''}" data-route="${escapeHtml(r)}">${escapeHtml(r)}</span>`;
+        }).join("");
+        routesBox.querySelectorAll(".chip").forEach(chip => {
+          chip.addEventListener("click", () => {
+            const route = chip.dataset.route;
+            // If all currently on (showing all), first click switches to "only this route"
+            // If mix, toggle that one
+            const allOn = routes.every(rr => {
+              const sel = item.cfg.routes || [];
+              return sel.length === 0 || sel.includes(rr);
+            });
+            if (allOn) {
+              // transition: from "all" to "only route"
+              item.cfg.routes = [route];
+            } else {
+              let sel = (item.cfg.routes || []).slice();
+              if (sel.includes(route)) sel = sel.filter(x => x !== route);
+              else sel.push(route);
+              if (sel.length === routes.length) sel = [];  // back to all
+              item.cfg.routes = sel;
+            }
+            saveState();
+            // re-render chips
+            routesBox.querySelectorAll(".chip").forEach(c => {
+              const r = c.dataset.route;
+              const on = item.cfg.routes.length === 0 || item.cfg.routes.includes(r);
+              c.classList.toggle("on", on);
+            });
+            // remount widget body to apply filter
+            const itemEl = gridEl.querySelector(`.grid-stack-item[data-id="${item.id}"]`);
+            if (itemEl) {
+              const body = itemEl.querySelector(".body");
+              if (body) {
+                body.innerHTML = `<div style="color:var(--muted);padding:8px;">載入中…</div>`;
+                const fakeEl = document.createElement('div');
+                fillWidgetBody(item, body, fakeEl, itemEl);
+                fakeEl.remove();
+              }
+            }
+          });
+        });
+      } catch (e) {
+        if (routesBox) routesBox.innerHTML = `<span class="hint" style="color:var(--bad);">載入失敗: ${escapeHtml(String(e.message || e))}</span>`;
+      }
+    }
+
+    async function searchStops() {
+      if (!searchInput) return;
+      const q = (searchInput.value || "").trim().toLowerCase();
+      if (q.length === 0) {
+        resultsBox.innerHTML = `<div class="loading">輸入關鍵字搜尋…</div>`;
+        return;
+      }
+      // Load master list once (lazy)
+      if (!allStops) {
+        resultsBox.innerHTML = `<div class="loading">載入 KMB 巴士站 master list…</div>`;
+        try {
+          const r = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop`, { cache: "no-store" });
+          if (!r.ok) { resultsBox.innerHTML = `<div class="empty">HTTP ${r.status}</div>`; return; }
+          const j = await r.json();
+          allStops = j.data || [];
+        } catch (e) {
+          resultsBox.innerHTML = `<div class="empty">Master list 載入失敗: ${escapeHtml(String(e.message || e))}</div>`;
+          return;
+        }
+      }
+      const filtered = allStops.filter(s => {
+        const name = `${s.name_tc || ""} ${s.name_sc || ""} ${s.name_en || ""} ${s.stop}`.toLowerCase();
+        return name.includes(q);
+      });
+      renderStopResults(filtered);
+    }
+
+    if (searchInput) {
+      let timer = null;
+      searchInput.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(searchStops, 250);
+      });
+    }
+    if (searchAllBtn) {
+      searchAllBtn.addEventListener("click", () => {
+        if (!searchInput) return;
+        searchInput.value = "";
+        searchStops();
+      });
+    }
+
+    // If we already have a stop selected, populate routes box on settings open
+    if (item.cfg.stopId) {
+      if (routesBox) routesBox.innerHTML = `<span class="hint" style="color:var(--muted-2);">載入路線中…</span>`;
+      loadRoutesForStop(item.cfg.stopId);
+    }
   }
 }
 

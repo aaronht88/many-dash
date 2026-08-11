@@ -28,6 +28,8 @@ USER_AGENT = "DashboardPrototype/0.1 (+https://trycloudflare.com)"
 CACHE = {}  # url -> (fetched_at, items)
 HKO_CACHE = {}  # dataType -> (fetched_at, payload)
 HKO_TTL = 300  # 5 minutes
+BUS_CACHE = {}  # cache_key -> (fetched_at, payload) — KMB + future providers
+BUS_TTL = 30   # 30s — bus ETAs need fresh data
 
 ATOM = "{http://www.w3.org/2005/Atom}"
 DC = "{http://purl.org/dc/elements/1.1/}"
@@ -160,6 +162,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.handle_feed()
         elif self.path.startswith("/api/hko"):
             self.handle_hko()
+        elif self.path.startswith("/api/bus"):
+            self.handle_bus()
         else:
             super().do_GET()
 
@@ -199,6 +203,65 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_json(502, {"error": "fetch failed", "url": url})
             return
         self.send_json(200, {"url": url, "count": len(items), "items": items})
+
+    def handle_bus(self):
+        """
+        /api/bus/<provider>/<resource>
+          /api/bus/kmb/stop                          -> master stop list (5min cache)
+          /api/bus/kmb/stop-eta/<stop_id>            -> ETAs for a stop (30s cache)
+          /api/bus/kmb/route                         -> master route list (5min cache)
+        Stage 1: KMB only. Same shape can extend to Citybus/MTR later.
+        """
+        path = self.path[len("/api/bus"):].lstrip("/")
+        parts = path.split("/")
+        if len(parts) < 2:
+            self.send_json(400, {"error": "expected /api/bus/<provider>/<resource>"})
+            return
+        provider, resource = parts[0], parts[1]
+
+        if provider == "kmb":
+            base = "https://data.etabus.gov.hk/v1/transport/kmb"
+            if resource == "stop" and len(parts) == 2:
+                # master list
+                url = f"{base}/stop"
+                cache_key = "kmb|stop"
+                ttl = 300
+            elif resource == "route" and len(parts) == 2:
+                url = f"{base}/route"
+                cache_key = "kmb|route"
+                ttl = 300
+            elif resource == "stop-eta" and len(parts) == 3:
+                stop_id = parts[2]
+                if not stop_id or len(stop_id) > 32:
+                    self.send_json(400, {"error": "invalid stop_id"})
+                    return
+                url = f"{base}/stop-eta/{stop_id}"
+                cache_key = f"kmb|stop-eta|{stop_id}"
+                ttl = BUS_TTL
+            else:
+                self.send_json(404, {"error": "unknown bus resource", "path": path})
+                return
+        else:
+            self.send_json(404, {"error": f"provider '{provider}' not supported (stage 1: kmb only)"})
+            return
+
+        now = time.time()
+        if cache_key in BUS_CACHE and now - BUS_CACHE[cache_key][0] < ttl:
+            self.send_json(200, BUS_CACHE[cache_key][1])
+            return
+
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "application/json",
+            })
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            BUS_CACHE[cache_key] = (now, data)
+            self.send_json(200, data)
+        except Exception as e:
+            print(f"[bus error] {url}: {e}", file=sys.stderr)
+            self.send_json(502, {"error": "bus fetch failed", "detail": str(e)})
 
     def send_json(self, code, obj):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
