@@ -2332,7 +2332,19 @@ function mountBus(item, body, itemEl) {
     fetchInFlight = true;
     const t0 = performance.now();
     try {
-      const r = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}`, { cache: "no-store" });
+      // 10s hard timeout via AbortController so a hung CORS preflight or stalled
+      // connection can't leave the widget stuck on "載入中" forever.
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 10_000);
+      let r;
+      try {
+        r = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}`, {
+          cache: "no-store",
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(t);
+      }
       const fetchMs = performance.now() - t0;
       lastFetchMs = fetchMs;
       console.log(`[bus] fetch ${stopId} took ${fetchMs.toFixed(0)}ms`);
@@ -2377,7 +2389,8 @@ function mountBus(item, body, itemEl) {
       renderList({ enriched, generated: j.generated_timestamp, listHtml });
     } catch (e) {
       console.error("[bus] load failed:", e);
-      if (body.isConnected) renderError("巴士 widget 載入失敗", String(e && e.message || e));
+      const msg = e && e.name === "AbortError" ? "KMB 連線超時 (>10s)" : "巴士 widget 載入失敗";
+      if (body.isConnected) renderError(msg, String(e && e.message || e));
     } finally {
       fetchInFlight = false;
     }
