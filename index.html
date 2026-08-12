@@ -1391,6 +1391,8 @@
   </div>
   <button class="tool" id="addWidgetBtn" title="加 widget">+ Widget</button>
   <button class="tool" id="arrangeBtn" title="自動排列（往上收緊）">⊞ 排列</button>
+  <button class="tool" id="exportBtn" title="匯出分享碼">⎘ 分享</button>
+  <button class="tool" id="importBtn" title="匯入分享碼">⎘ 匯入</button>
   <div class="menu" id="pageMenu">
     <button class="tool">Page ▾</button>
     <div class="menu-list">
@@ -1440,6 +1442,69 @@
   </div>
 </div>
 
+<!-- Export share code modal -->
+<div class="modal-bg" id="exportModal">
+  <div class="modal" style="max-width:520px;">
+    <h3>⎘ 匯出分享碼</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+      複製下面嘅分享碼畀朋友 / 過 device / 備份。碼已經 base64 + UTF-8 safe，唔會走樣。
+    </div>
+    <textarea id="exportCode" readonly rows="6" style="
+      width:100%;
+      background:var(--panel-2);
+      border:1px solid var(--border-strong);
+      color:var(--text);
+      border-radius:var(--r-sm);
+      padding:8px 10px;
+      font-family:var(--font-mono);
+      font-size:11px;
+      line-height:1.45;
+      resize:vertical;
+      word-break:break-all;
+      outline:none;
+    "></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+      <span id="exportInfo" style="font-size:11px;color:var(--muted-2);font-family:var(--font-mono);"></span>
+      <button class="tool" id="exportCopy" style="background:var(--accent);border-color:var(--accent);color:white;">📋 複製</button>
+    </div>
+    <div class="actions" style="margin-top:12px;">
+      <button class="tool" id="exportClose">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import share code modal -->
+<div class="modal-bg" id="importModal">
+  <div class="modal" style="max-width:520px;">
+    <h3>⎘ 匯入分享碼</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+      貼上之前收到嘅分享碼。確認後將會<strong style="color:var(--bad);">覆蓋現有 dashboard</strong>。
+    </div>
+    <textarea id="importCode" rows="6" placeholder="貼上 MD1: 開頭嘅分享碼…" style="
+      width:100%;
+      background:var(--panel-2);
+      border:1px solid var(--border-strong);
+      color:var(--text);
+      border-radius:var(--r-sm);
+      padding:8px 10px;
+      font-family:var(--font-mono);
+      font-size:11px;
+      line-height:1.45;
+      resize:vertical;
+      word-break:break-all;
+      outline:none;
+    "></textarea>
+    <div id="importError" style="color:var(--bad);font-size:11px;margin-top:6px;display:none;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+      <span id="importInfo" style="font-size:11px;color:var(--muted-2);font-family:var(--font-mono);"></span>
+      <button class="tool" id="importConfirm" style="background:var(--accent);border-color:var(--accent);color:white;">⬇ 確認匯入</button>
+    </div>
+    <div class="actions" style="margin-top:12px;">
+      <button class="tool" id="importClose">取消</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    State
@@ -1485,6 +1550,43 @@ function saveState() {
 function pid() { return "x" + Math.random().toString(36).slice(2, 9); }
 function currentPage() { return state.pages[state.activePage]; }
 function findItem(id) { return currentPage().items.find(x => x.id === id); }
+
+/* ============================================================
+   Share code (export/import full dashboardState as base64)
+   ============================================================ */
+const SHARE_PREFIX = "MD1:";
+function encodeShareCode(s) {
+  // UTF-8 safe: encodeURIComponent then btoa. Generates ASCII-clean base64.
+  // Compact JSON: drop fsScale if 1 (default) to reduce size.
+  const compact = { ...s };
+  if (compact.fsScale === 1) delete compact.fsScale;
+  const json = JSON.stringify(compact);
+  return SHARE_PREFIX + btoa(unescape(encodeURIComponent(json)));
+}
+function decodeShareCode(code) {
+  if (typeof code !== "string") throw new Error("分享碼必須係文字");
+  code = code.trim();
+  if (!code.startsWith(SHARE_PREFIX)) {
+    // Be lenient: try to decode raw base64 too
+    try {
+      const json = decodeURIComponent(escape(atob(code)));
+      const obj = JSON.parse(json);
+      if (!obj || !Array.isArray(obj.pages)) throw new Error("無效嘅分享碼結構");
+      return obj;
+    } catch (e) {
+      throw new Error("分享碼格式錯誤 — 必須以 MD1: 開頭");
+    }
+  }
+  const b64 = code.slice(SHARE_PREFIX.length);
+  try {
+    const json = decodeURIComponent(escape(atob(b64)));
+    const obj = JSON.parse(json);
+    if (!obj || !Array.isArray(obj.pages)) throw new Error("無效嘅分享碼結構");
+    return obj;
+  } catch (e) {
+    throw new Error("分享碼解碼失敗 — 可能已損壞");
+  }
+}
 
 /* ============================================================
    Tabs
@@ -2619,6 +2721,101 @@ const pickerEl = document.getElementById("picker");
 document.getElementById("addWidgetBtn").addEventListener("click", () => pickerEl.classList.add("open"));
 document.getElementById("pickerClose").addEventListener("click", () => pickerEl.classList.remove("open"));
 pickerEl.addEventListener("click", e => { if (e.target === pickerEl) pickerEl.classList.remove("open"); });
+
+/* ============================================================
+   Share code modals
+   ============================================================ */
+const exportModal = document.getElementById("exportModal");
+const importModal = document.getElementById("importModal");
+const exportCode = document.getElementById("exportCode");
+const exportInfo = document.getElementById("exportInfo");
+const exportCopyBtn = document.getElementById("exportCopy");
+const exportCloseBtn = document.getElementById("exportClose");
+const importCode = document.getElementById("importCode");
+const importError = document.getElementById("importError");
+const importInfo = document.getElementById("importInfo");
+const importConfirmBtn = document.getElementById("importConfirm");
+const importCloseBtn = document.getElementById("importClose");
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  try {
+    const code = encodeShareCode(state);
+    exportCode.value = code;
+    const pages = (state.pages || []).length;
+    const widgets = (state.pages || []).reduce((n, p) => n + ((p.items || []).length), 0);
+    exportInfo.textContent = `${(code.length / 1024).toFixed(1)} KB · ${pages} page${pages===1?"":"s"} · ${widgets} widget${widgets===1?"":"s"}`;
+    exportModal.classList.add("open");
+    // Auto-select all for easy Ctrl+C
+    setTimeout(() => { exportCode.focus(); exportCode.select(); }, 50);
+  } catch (e) {
+    alert("匯出失敗: " + e.message);
+  }
+});
+exportCloseBtn.addEventListener("click", () => exportModal.classList.remove("open"));
+exportModal.addEventListener("click", e => { if (e.target === exportModal) exportModal.classList.remove("open"); });
+exportCopyBtn.addEventListener("click", async () => {
+  const code = exportCode.value;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(code);
+    } else {
+      // Fallback: select textarea so user can Ctrl+C
+      exportCode.focus(); exportCode.select();
+      document.execCommand && document.execCommand("copy");
+    }
+    exportCopyBtn.textContent = "✓ 已複製";
+    setTimeout(() => { exportCopyBtn.textContent = "📋 複製"; }, 1500);
+  } catch (e) {
+    exportCode.focus(); exportCode.select();
+    alert("自動複製失敗，請用 Ctrl+C 手動複製");
+  }
+});
+
+document.getElementById("importBtn").addEventListener("click", () => {
+  importCode.value = "";
+  importError.style.display = "none";
+  importInfo.textContent = "";
+  importConfirmBtn.disabled = false;
+  importModal.classList.add("open");
+  setTimeout(() => importCode.focus(), 50);
+});
+importCloseBtn.addEventListener("click", () => importModal.classList.remove("open"));
+importModal.addEventListener("click", e => { if (e.target === importModal) importModal.classList.remove("open"); });
+importCode.addEventListener("input", () => {
+  importError.style.display = "none";
+  importInfo.textContent = "";
+});
+importConfirmBtn.addEventListener("click", () => {
+  const code = importCode.value.trim();
+  if (!code) {
+    importError.textContent = "請貼上分享碼";
+    importError.style.display = "block";
+    return;
+  }
+  let parsed;
+  try {
+    parsed = decodeShareCode(code);
+  } catch (e) {
+    importError.textContent = e.message;
+    importError.style.display = "block";
+    importInfo.textContent = "";
+    return;
+  }
+  // Preview stats
+  const pages = (parsed.pages || []).length;
+  const widgets = (parsed.pages || []).reduce((n, p) => n + ((p.items || []).length), 0);
+  if (!confirm(`將會覆蓋現有 dashboard:\n  → ${pages} page${pages===1?"":"s"} · ${widgets} widget${widgets===1?"":"s"}\n\n確認匯入？`)) {
+    return;
+  }
+  // Apply
+  state = Object.assign(defaultState(), parsed);
+  if (!state.fsScale) state.fsScale = 1;
+  saveState();
+  applyAppearance();
+  renderTabs();
+  mountPage();
+  importModal.classList.remove("open");
+});
 pickerEl.querySelectorAll("button[data-type]").forEach(b => {
   b.addEventListener("click", () => {
     const type = b.dataset.type;
