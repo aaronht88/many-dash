@@ -530,6 +530,25 @@
     border-radius: 0 var(--r-sm) var(--r-sm) 0;
     font-size: calc(12px * var(--fs-scale));
   }
+  /* V4: HKO warning badges — official icon + short label */
+  .w-weather .w-warn-badges {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .w-weather .w-warn-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--warn-soft);
+    border: 1px solid rgba(221, 91, 0, 0.30);
+    border-radius: var(--r-sm);
+    padding: 3px 8px 3px 4px;
+    color: var(--warn);
+    font-size: calc(11px * var(--fs-scale));
+    font-weight: 510;
+  }
+  .w-weather .w-warn-badge img {
+    width: 18px; height: 18px;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+  }
   .w-weather .strip { display: flex; gap: 4px; margin-top: 6px; }
   /* V4: forecast day card — minimal V1 + V2 hybrid */
   .w-weather .day {
@@ -1953,6 +1972,52 @@ const HKO_SVG_FOG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const HKO_SVG_WIND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8h12a3 3 0 1 0-3-3"/><path d="M3 14h16a3 3 0 1 1-3 3"/><path d="M3 11h7"/></svg>`;
 const HKO_SVG_CYCLONE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M12 4a8 8 0 0 0 0 16M4 12a8 8 0 0 0 8-8M12 20a8 8 0 0 0 8-8M20 12a8 8 0 0 0-8 8"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>`;
 
+/* ============================================================
+   HKO warning signals — keyword → short label + official icon
+   Icon filenames downloaded from hko.gov.hk (vendor/hko-warn/*.gif)
+   Each pattern has: test (regex on warningMessage text), short (display label), icon (path)
+   ============================================================ */
+const HKO_WARN_ICON = {
+  vhot:        { test: /酷熱天氣警告/,             short: "酷熱天氣警告" },
+  cold:        { test: /寒冷天氣警告/,             short: "寒冷天氣警告" },
+  raina:       { test: /(黃色|黃)\s*暴雨/,          short: "黃色暴雨警告" },
+  rainr:       { test: /(紅色|紅)\s*暴雨/,          short: "紅色暴雨警告" },
+  rainb:       { test: /(黑色|黑)\s*暴雨/,          short: "黑色暴雨警告" },
+  thunder:     { test: /雷暴警告/,                  short: "雷暴警告" },
+  landslip:    { test: /(山泥傾瀉|滑坡)警告/,       short: "山泥傾瀉警告" },
+  fire:        { test: /(黃色|黃)\s*火災/,          short: "黃色火災警告" },
+  firer:       { test: /(紅色|紅)\s*火災/,          short: "紅色火災警告" },
+  gust:        { test: /強烈季候風信號/,            short: "強烈季候風信號" },
+  tc1:         { test: /(一號戒備信號|1號颱風)/,    short: "一號風球" },
+  tc3:         { test: /(三號強風信號|3號颱風)/,    short: "三號風球" },
+  tc8ne:       { test: /八號東北(烈風或暴風)?信號/,  short: "八號東北" },
+  tc8nw:       { test: /八號西北(烈風或暴風)?信號/,  short: "八號西北" },
+  tc8se:       { test: /八號東南(烈風或暴風)?信號/,  short: "八號東南" },
+  tc8sw:       { test: /八號西南(烈風或暴風)?信號/,  short: "八號西南" },
+  tc9:         { test: /(九號烈風或暴風增強信號|9號颱風)/, short: "九號風球" },
+  tc10:        { test: /(十號颶風信號|10號颱風)/,   short: "十號風球" },
+};
+
+// Heuristic order — most critical / most likely to fire first
+const HKO_WARN_ORDER = ["rainb","rainr","raina","tc10","tc9","tc8sw","tc8se","tc8nw","tc8ne","tc3","tc1","vhot","cold","thunder","gust","landslip","firer","fire"];
+
+function summarizeWarn(warnText) {
+  if (!warnText) return [];
+  const out = [];
+  for (const code of HKO_WARN_ORDER) {
+    const cfg = HKO_WARN_ICON[code];
+    if (cfg && cfg.test.test(warnText)) {
+      out.push({
+        code,
+        short: cfg.short,
+        icon: `vendor/hko-warn/${code}.gif`,
+        full: warnText,
+      });
+    }
+  }
+  return out;
+}
+
 const HKO_ICON = {
    50: { e: "☀️",  svg: HKO_SVG_SUN,         t: "陽光充沛" },
    51: { e: "🌤️", svg: HKO_SVG_SUN_CLOUD,  t: "陽光充沛 間有雲" },
@@ -2111,6 +2176,8 @@ function mountWeather(item, body, itemEl) {
     // warningMessage may be a string ("") or array of strings depending on HKO data freshness
     const wmRaw = rhr.warningMessage;
     const warn = (Array.isArray(wmRaw) ? wmRaw.join("") : (wmRaw || "")).trim();
+    // Build a compact list of active warnings (HKO signal keywords → short label + icon path).
+    const activeWarns = summarizeWarn(warn);
 
     // 7-day forecast (best-effort)
     let days = [];
@@ -2174,7 +2241,15 @@ function mountWeather(item, body, itemEl) {
         <div class="wx-temp">${temp.value}°</div>
       </div>
       <div class="cond">${escapeHtml(iconDef.t)} · ${escapeHtml(place)}</div>
-      ${warn && showWarn ? `<div class="w-warn">${escapeHtml(warn)}</div>` : ""}
+      ${activeWarns.length > 0 && showWarn ? `
+        <div class="w-warn-badges">
+          ${activeWarns.map(w => `
+            <span class="w-warn-badge" title="${escapeHtml(w.full)}">
+              <img src="${w.icon}" alt="" />
+              <span>${escapeHtml(w.short)}</span>
+            </span>
+          `).join("")}
+        </div>` : ""}
       ${compactMeta ? `
         <div class="comfort">${comfortLine(rhr, place)}</div>
       ` : `
